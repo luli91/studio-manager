@@ -20,7 +20,7 @@ export default function CallbackPage() {
           .from("perfiles")
           .select("rol")
           .eq("id", user.id)
-          .single()
+          .maybeSingle()
 
         // 3. ¡La lógica de redirección!
         if (!perfil) {
