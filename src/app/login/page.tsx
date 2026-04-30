@@ -40,7 +40,7 @@ const handleLogin = async (e: React.FormEvent) => {
     if (authError) throw new Error("Credenciales inválidas")
 
     if (authData.user) {
-      // AQUÍ LA MAGIA: Consultamos el rol en la tabla perfiles
+      // Consultamos el rol en la tabla perfiles
       const { data: perfil, error: perfilError } = await supabase
         .from("perfiles")
         .select("rol")
@@ -53,7 +53,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
       // Redirección inteligente
       if (perfil.rol === "admin") {
-        router.push("/admin/dashboard")
+        router.push("/admin")
       } else {
         router.push("/dashboard")
       }

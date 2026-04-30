@@ -28,7 +28,7 @@ export default function CallbackPage() {
           // ¡Acá la mandaremos al "Peaje" para pedirle el teléfono!
           router.push("/completar-perfil") 
         } else if (perfil.rol === "admin") {
-          router.push("/admin/dashboard")
+          router.push("/admin")
         } else {
           router.push("/dashboard")
         }
