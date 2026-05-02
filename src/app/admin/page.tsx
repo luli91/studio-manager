@@ -1,9 +1,36 @@
 "use client"
 
-import { Users, TrendingUp, MapPin, CalendarHeart, Flame, ArrowUpRight } from "lucide-react"
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase"
+import { Users, TrendingUp, MapPin, CalendarHeart, Flame, ArrowUpRight, DollarSign, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
 
 export default function AdminDashboardMainPage() {
+  const supabase = createClient()
+  const [recaudacionMes, setRecaudacionMes] = useState(0)
+  const [cargandoFinanzas, setCargandoFinanzas] = useState(true)
+
+  // Cargamos la recaudación real para la tarjeta de finanzas
+  useEffect(() => {
+    const cargarRecaudacion = async () => {
+      const ahora = new Date()
+      const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
+
+      const { data } = await supabase
+        .from("pagos")
+        .select("monto")
+        .gte("fecha", inicioMes)
+
+      if (data) {
+        const total = data.reduce((sum, pago) => sum + Number(pago.monto), 0)
+        setRecaudacionMes(total)
+      }
+      setCargandoFinanzas(false)
+    }
+    cargarRecaudacion()
+  }, [supabase])
+
   return (
     <div className="space-y-8 animate-in fade-in">
       
@@ -12,8 +39,34 @@ export default function AdminDashboardMainPage() {
         <p className="text-slate-500 mt-1">Acá tenés un pantallazo de cómo viene tu negocio este mes.</p>
       </div>
 
-      {/* MÉTRICAS PRINCIPALES (Tarjetas arriba) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* MÉTRICAS PRINCIPALES: Las 4 tarjetas superiores */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* 1. TARJETA DE FINANZAS (Nueva) */}
+        <Link href="/admin/finanzas" className="block transition-transform hover:scale-[1.02] active:scale-95">
+          <Card className="border-none shadow-sm bg-emerald-600 text-white h-full">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <p className="text-emerald-100 text-sm font-medium uppercase tracking-wider">Recaudación Mes</p>
+                  {cargandoFinanzas ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-emerald-200" />
+                  ) : (
+                    <p className="text-3xl font-black">${recaudacionMes.toLocaleString('es-AR')}</p>
+                  )}
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              <p className="text-emerald-100 text-xs mt-4 flex items-center font-bold">
+                Ver detalle de ingresos <ArrowUpRight className="h-3 w-3 ml-1" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 2. ALUMNAS NUEVAS */}
         <Card className="border-none shadow-sm bg-gradient-to-br from-fuchsia-600 to-fuchsia-800 text-white">
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
@@ -31,6 +84,7 @@ export default function AdminDashboardMainPage() {
           </CardContent>
         </Card>
 
+        {/* 3. CLASE ESTRELLA */}
         <Card className="border-none shadow-sm">
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
@@ -47,6 +101,7 @@ export default function AdminDashboardMainPage() {
           </CardContent>
         </Card>
 
+        {/* 4. PRÓXIMAS RESERVAS */}
         <Card className="border-none shadow-sm">
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
@@ -63,9 +118,10 @@ export default function AdminDashboardMainPage() {
         </Card>
       </div>
 
+      {/* GRÁFICOS INFERIORES: Barrios y Ocupación */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* GRÁFICO 1: DE DÓNDE VIENEN LAS ALUMNAS (Visión expansión) */}
+        {/* GRÁFICO 1: Barrios */}
         <Card className="border-none shadow-sm">
           <CardHeader className="border-b border-slate-100 pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -108,7 +164,7 @@ export default function AdminDashboardMainPage() {
           </CardContent>
         </Card>
 
-        {/* GRÁFICO 2: RENDIMIENTO DE CLASES */}
+        {/* GRÁFICO 2: Rendimiento de clases */}
         <Card className="border-none shadow-sm">
           <CardHeader className="border-b border-slate-100 pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
