@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import NuevaClaseForm from "@/components/admin/NuevaClaseForm"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
+import GestionarClaseModal from "@/components/admin/GestionarClaseModal"
 
 export default function AdminClasesPage() {
   const supabase = createClient()
@@ -14,11 +15,10 @@ export default function AdminClasesPage() {
   const [clases, setClases] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
   
-  // NUEVO: Estado para el buscador
   const [filtro, setFiltro] = useState("")
-
   const [claseABorrar, setClaseABorrar] = useState<any | null>(null)
   const [borrando, setBorrando] = useState(false)
+  const [claseAGestionar, setClaseAGestionar] = useState<any | null>(null)
 
   const cargarClases = async () => {
     setCargando(true)
@@ -75,7 +75,6 @@ export default function AdminClasesPage() {
     return `${dia}/${mes}/${año}`
   }
 
-  // Lógica del recordatorio de grilla vacía
   let alertaGrilla = false;
   let ultimaFecha = "";
   
@@ -91,7 +90,6 @@ export default function AdminClasesPage() {
     ultimaFecha = formatearFecha(ultimaClase.fecha);
   }
 
-  // NUEVO: Lógica de filtrado inteligente
   const clasesFiltradas = clases.filter(clase => {
     const busqueda = filtro.toLowerCase();
     const fechaFormateada = formatearFecha(clase.fecha);
@@ -141,7 +139,6 @@ export default function AdminClasesPage() {
         </div>
       )}
 
-      {/* NUEVO: BUSCADOR DE CLASES */}
       {!mostrandoForm && !cargando && clases.length > 0 && (
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -190,7 +187,7 @@ export default function AdminClasesPage() {
                         )}
                       </h3>
                       <p className="text-sm text-slate-500 font-medium">
-                        {formatearFecha(clase.fecha)} • {clase.costo_creditos === 0 ? `Precio: $${clase.precio}` : `Gasta ${clase.costo_creditos} crédito`}
+                        {formatearFecha(clase.fecha)} • {clase.costo_creditos === 0 ? `Precio: $${clase.precio}` : `Gasta ${clase.costo_creditos} clase${clase.costo_creditos !== 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>
@@ -202,8 +199,7 @@ export default function AdminClasesPage() {
                     </div>
                     
                     <div className="flex gap-2">
-                      {/* BOTÓN PREPARADO PARA GESTIONAR LA CLASE (Aún sin función) */}
-                      <Button variant="ghost" size="icon" title="Gestionar clase y alumnas" className="text-slate-400 hover:text-fuchsia-600 hover:bg-fuchsia-50">
+                      <Button variant="ghost" size="icon" title="Gestionar clase y alumnas" onClick={() => setClaseAGestionar(clase)} className="text-slate-400 hover:text-fuchsia-600 hover:bg-fuchsia-50">
                         <Settings2 className="h-4 w-4" />
                       </Button>
                       
@@ -219,7 +215,6 @@ export default function AdminClasesPage() {
         </div>
       )}
 
-      {/* Modal de Borrado Inteligente (Sin cambios) */}
       {claseABorrar && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
@@ -249,6 +244,13 @@ export default function AdminClasesPage() {
           </div>
         </div>
       )}
+      {claseAGestionar && (
+        <GestionarClaseModal 
+            clase={claseAGestionar} 
+            onClose={() => setClaseAGestionar(null)} 
+            onUpdate={cargarClases} 
+        />
+        )}
 
     </div>
   )

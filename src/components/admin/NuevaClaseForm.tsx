@@ -21,9 +21,8 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
   
   const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">("creditos")
   
-  // NUEVO: Estados para la repetición
   const [repetir, setRepetir] = useState(false)
-  const [mesesRepeticion, setMesesRepeticion] = useState(1) // 1, 2 o 3 meses
+  const [mesesRepeticion, setMesesRepeticion] = useState(1)
 
   const [clase, setClase] = useState({
     fecha: "",
@@ -40,15 +39,12 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
     setCargando(true)
 
     try {
-      // Si repite, generamos un código único para agrupar todas estas clases
       const grupoId = repetir ? crypto.randomUUID() : null;
-      // Calculamos la cantidad de semanas (1 mes = aprox 4 semanas)
       const cantidadSemanas = repetir ? (mesesRepeticion * 4) : 1;
       
       const clasesAInsertar = [];
       let fechaActual = new Date(clase.fecha + "T00:00:00");
 
-      // Bucle mágico: Creamos 1 clase, o 4, o 8, o 12... según lo que eligió
       for (let i = 0; i < cantidadSemanas; i++) {
         const year = fechaActual.getFullYear();
         const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
@@ -65,14 +61,12 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
           precio: (clase.es_evento && formaDePago === "pesos") ? clase.precio : null,
           descripcion: clase.es_evento ? clase.descripcion : null,
           dia_semana: obtenerDiaSemana(fechaFormateada),
-          grupo_id: grupoId // La etiqueta que las conecta
+          grupo_id: grupoId 
         });
 
-        // Le sumamos 7 días exactos a la fecha para la próxima vuelta del bucle
         fechaActual.setDate(fechaActual.getDate() + 7);
       }
 
-      // Supabase es genial: le podemos mandar toda la lista junta y la guarda de una
       const { error } = await supabase.from("clases").insert(clasesAInsertar)
 
       if (error) throw error
@@ -110,7 +104,6 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
         </div>
       </div>
 
-      {/* NUEVO: SECCIÓN REPETIR */}
       <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -142,7 +135,6 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
         )}
       </div>
 
-      {/* SECCIÓN EVENTOS (No se cambia, queda igual que antes) */}
       <div className="p-4 bg-fuchsia-50/50 rounded-xl border border-fuchsia-100 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -162,7 +154,7 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
             <div className="space-y-3">
               <Label>¿Cómo se paga este evento?</Label>
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-lg border transition-all ${formaDePago === "creditos" ? "bg-fuchsia-600 text-white border-fuchsia-600 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-fuchsia-300"}`}>Gasta 1 Crédito</button>
+                <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-lg border transition-all ${formaDePago === "creditos" ? "bg-fuchsia-600 text-white border-fuchsia-600 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-fuchsia-300"}`}>Gasta 1 Clase</button>
                 <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-lg border transition-all ${formaDePago === "pesos" ? "bg-fuchsia-600 text-white border-fuchsia-600 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-fuchsia-300"}`}>Se cobra aparte</button>
               </div>
             </div>

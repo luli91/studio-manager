@@ -3,8 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { Users, Calendar, Video, Bell, LogOut, Menu, X, PlusCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase"
+import { LayoutDashboard, Users, CalendarDays, Image as ImageIcon, Wallet, Settings, LogOut, Menu, X } from "lucide-react"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -18,12 +18,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const menuItems = [
-    { label: "Alumnas", path: "/admin", icon: <Users className="h-5 w-5" /> },
-    { label: "Clases", path: "/admin/clases", icon: <Calendar className="h-5 w-5" /> },
-    { label: "Generar Clases", path: "/admin/generar", icon: <PlusCircle className="h-5 w-5" /> },
-    { label: "Videos", path: "/admin/videos", icon: <Video className="h-5 w-5" /> },
-  ]
-
+  { label: "Dashboard", path: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
+  { label: "Alumnas", path: "/admin/alumnas", icon: <Users className="h-5 w-5" /> },
+  { label: "Clases", path: "/admin/clases", icon: <CalendarDays className="h-5 w-5" /> },
+  { label: "Multimedia", path: "/admin/multimedia", icon: <ImageIcon className="h-5 w-5" /> },
+  { label: "Finanzas", path: "/admin/finanzas", icon: <Wallet className="h-5 w-5" /> },
+  { label: "Configuración", path: "/admin/config", icon: <Settings className="h-5 w-5" /> },
+]
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-slate-100 text-slate-900 font-sans">
       

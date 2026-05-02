@@ -1,102 +1,149 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase"
-import { Loader2, Search, User as UserIcon, CheckCircle2, ChevronRight } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Users, TrendingUp, MapPin, CalendarHeart, Flame, ArrowUpRight } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function AdminDashboardPage() {
-  const supabase = createClient()
-  const [alumnas, setAlumnas] = useState<any[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [filtro, setFiltro] = useState("")
-
-  useEffect(() => {
-    const cargarAlumnas = async () => {
-      // Traemos a todos los usuarios que tengan rol de "alumna"
-      const { data, error } = await supabase
-        .from("perfiles")
-        .select("*")
-        .eq("rol", "alumna")
-        .order("nombre_completo", { ascending: true })
-
-      if (data) setAlumnas(data)
-      setCargando(false)
-    }
-
-    cargarAlumnas()
-  }, [supabase])
-
-  const alumnasFiltradas = alumnas.filter(a => 
-    a.nombre_completo?.toLowerCase().includes(filtro.toLowerCase()) || 
-    a.email?.toLowerCase().includes(filtro.toLowerCase())
-  )
-
-  if (cargando) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-fuchsia-600" />
-      </div>
-    )
-  }
-
+export default function AdminDashboardMainPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <UserIcon className="h-8 w-8 text-fuchsia-600" />
-            Directorio de Alumnas
-          </h1>
-          <p className="text-slate-500 mt-1">Tenés {alumnas.length} alumnas registradas en el estudio.</p>
-        </div>
+    <div className="space-y-8 animate-in fade-in">
+      
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Resumen del Estudio</h1>
+        <p className="text-slate-500 mt-1">Acá tenés un pantallazo de cómo viene tu negocio este mes.</p>
       </div>
 
-      <Card className="border-none shadow-md">
-        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4 rounded-t-xl">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <Input 
-              placeholder="Buscar por nombre o email..." 
-              className="pl-10 bg-white border-slate-200"
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y divide-slate-100">
-            {alumnasFiltradas.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">No se encontraron alumnas.</div>
-            ) : (
-              alumnasFiltradas.map((alumna) => (
-                <div key={alumna.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 hover:bg-slate-50 transition-colors">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-slate-900">{alumna.nombre_completo || "Sin nombre"}</h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500">
-                      <span>📧 {alumna.email}</span>
-                      <span>📱 {alumna.telefono || "Sin teléfono"}</span>
+      {/* MÉTRICAS PRINCIPALES (Tarjetas arriba) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-sm bg-gradient-to-br from-fuchsia-600 to-fuchsia-800 text-white">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-fuchsia-100 text-sm font-medium uppercase tracking-wider">Alumnas Nuevas</p>
+                <p className="text-4xl font-black">+14</p>
+              </div>
+              <div className="bg-white/20 p-3 rounded-xl">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <p className="text-fuchsia-100 text-sm mt-4 flex items-center">
+              <TrendingUp className="h-4 w-4 mr-1" /> 20% más que el mes pasado
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">Clase Estrella</p>
+                <p className="text-2xl font-bold text-slate-900">Pole Sport</p>
+                <p className="text-sm text-fuchsia-600 font-bold">Viernes 18:00hs</p>
+              </div>
+              <div className="bg-orange-100 p-3 rounded-xl">
+                <Flame className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+            <p className="text-slate-500 text-sm mt-4">Con 95% de ocupación este mes.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">Próximas 48hs</p>
+                <p className="text-2xl font-bold text-slate-900">32 Reservas</p>
+              </div>
+              <div className="bg-emerald-100 p-3 rounded-xl">
+                <CalendarHeart className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-slate-500 text-sm mt-4">En 5 clases programadas.</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* GRÁFICO 1: DE DÓNDE VIENEN LAS ALUMNAS (Visión expansión) */}
+        <Card className="border-none shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-fuchsia-600" /> 
+              Zonas de mayor afluencia
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-5">
+            <p className="text-sm text-slate-500 mb-2">Basado en las direcciones registradas. Ideal para pensar tu próxima sucursal.</p>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium text-slate-700">
+                <span>Palermo / Colegiales</span>
+                <span>45%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2.5">
+                <div className="bg-fuchsia-600 h-2.5 rounded-full" style={{ width: '45%' }}></div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium text-slate-700">
+                <span>Belgrano</span>
+                <span>30%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2.5">
+                <div className="bg-fuchsia-500 h-2.5 rounded-full" style={{ width: '30%' }}></div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium text-slate-700">
+                <span>Recoleta</span>
+                <span>15%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2.5">
+                <div className="bg-fuchsia-400 h-2.5 rounded-full" style={{ width: '15%' }}></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* GRÁFICO 2: RENDIMIENTO DE CLASES */}
+        <Card className="border-none shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-emerald-600" /> 
+              Clases más solicitadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <p className="text-sm text-slate-500 mb-6">Cuáles son los niveles o disciplinas que más llenan el cupo.</p>
+            
+            <div className="space-y-4">
+              {[
+                { nombre: "Pole Sport (Principiantes)", ocupacion: 92 },
+                { nombre: "Elongación y Flex", ocupacion: 78 },
+                { nombre: "Pole Coreográfico", ocupacion: 65 },
+                { nombre: "Pole Sport (Avanzadas)", ocupacion: 40 },
+              ].map((clase, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">{clase.nombre}</p>
+                    <div className="w-48 bg-slate-200 rounded-full h-1.5 mt-2">
+                      <div className={`h-1.5 rounded-full ${clase.ocupacion > 80 ? 'bg-emerald-500' : clase.ocupacion > 50 ? 'bg-amber-500' : 'bg-slate-400'}`} style={{ width: `${clase.ocupacion}%` }}></div>
                     </div>
                   </div>
-                  
-                  <div className="mt-4 md:mt-0 flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Clases Disponibles</p>
-                      <p className="text-lg font-bold text-fuchsia-600 flex items-center justify-end gap-1">
-                        {alumna.creditos_clases || 0}
-                      </p>
-                    </div>
-                    <button className="bg-white border border-slate-200 text-slate-700 hover:border-fuchsia-300 hover:text-fuchsia-600 px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center shadow-sm">
-                      Ver perfil <ChevronRight className="ml-1 h-4 w-4" />
-                    </button>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500 uppercase font-bold">Ocupación</p>
+                    <p className="font-black text-slate-900">{clase.ocupacion}%</p>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+      </div>
     </div>
   )
 }
