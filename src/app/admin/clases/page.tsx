@@ -24,7 +24,10 @@ export default function AdminClasesPage() {
     setCargando(true)
     const { data, error } = await supabase
       .from("clases")
-      .select("*")
+      .select(`
+        *,
+        reservas (id)
+      `)
       .gte("fecha", new Date().toISOString().split('T')[0])
       .order("fecha", { ascending: true })
       .order("horario", { ascending: true })
@@ -195,7 +198,7 @@ export default function AdminClasesPage() {
                   <div className="mt-4 sm:mt-0 flex items-center gap-6">
                     <div className="text-right flex items-center gap-2 text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md">
                       <Users className="h-4 w-4" />
-                      <span className="text-sm font-bold">0 / {clase.cupo_maximo}</span>
+                      <span className="text-sm font-bold">{clase.reservas?.length || 0} / {clase.cupo_maximo}</span>
                     </div>
                     
                     <div className="flex gap-2">

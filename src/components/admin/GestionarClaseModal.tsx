@@ -59,8 +59,9 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
           perfil_id: alumnaSeleccionada, 
           clase_id: clase.id, 
           estado: "confirmada",
-          fecha_clase: clase.fecha // <-- Dato corregido
+          fecha_clase: clase.fecha 
         }])
+        .select()
 
       if (errorReserva) throw errorReserva
 

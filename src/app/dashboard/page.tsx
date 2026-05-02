@@ -4,22 +4,29 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Loader2, CalendarDays, User as UserIcon, CreditCard, Sparkles, LogOut, ArrowRight, CheckCircle2, Pencil, X, Save } from "lucide-react"
+import { Loader2, CalendarDays, User as UserIcon, CreditCard, Sparkles, LogOut, CheckCircle2, Pencil, X, Save, Clock } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import GrillaReservas from "@/components/alumnas/GrillaReservas"
 
 export default function DashboardAlumna() {
   const router = useRouter()
   const supabase = createClient()
 
   const [perfil, setPerfil] = useState<any>(null)
+  
+  // Estado para guardar las reservas de la alumna
+  const [misReservas, setMisReservas] = useState<any[]>([])
+  
+  // NUEVO ESTADO: Para controlar el botón de cancelar
+  const [procesandoCancelacion, setProcesandoCancelacion] = useState<string | null>(null)
+  
   const [cargando, setCargando] = useState(true)
   const [seccionActiva, setSeccionActiva] = useState("clases")
 
-  // Nuevos estados para la edición
   const [editando, setEditando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [formData, setFormData] = useState({
@@ -29,35 +36,39 @@ export default function DashboardAlumna() {
     direccion: ""
   })
 
-  useEffect(() => {
-    const cargarPerfil = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push("/login")
-        return
-      }
-
-      const { data } = await supabase
-        .from("perfiles")
-        .select("*")
-        .eq("id", user.id)
-        .single()
-
-      if (data) {
-        setPerfil(data)
-        // Cargamos los datos actuales en el formulario por si quiere editar
-        setFormData({
-          nombre_completo: data.nombre_completo || "",
-          telefono: data.telefono || "",
-          contacto_urgencia: data.contacto_urgencia || "",
-          direccion: data.direccion || ""
-        })
-      }
-      setCargando(false)
+  const cargarPerfilYReservas = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push("/login")
+      return
     }
 
-    cargarPerfil()
+    const { data: dataPerfil } = await supabase.from("perfiles").select("*").eq("id", user.id).single()
+    if (dataPerfil) {
+      setPerfil(dataPerfil)
+      setFormData({
+        nombre_completo: dataPerfil.nombre_completo || "",
+        telefono: dataPerfil.telefono || "",
+        contacto_urgencia: dataPerfil.contacto_urgencia || "",
+        direccion: dataPerfil.direccion || ""
+      })
+    }
+
+    const hoy = new Date().toISOString().split('T')[0]
+    const { data: dataReservas } = await supabase
+      .from("reservas")
+      // ¡Acá agregamos costo_creditos para saber cuánto devolverle!
+      .select(`id, estado, fecha_clase, clases (nivel, horario, dia_semana, es_evento, costo_creditos)`)
+      .eq("perfil_id", user.id)
+      .gte("fecha_clase", hoy)
+      .order("fecha_clase", { ascending: true })
+
+    if (dataReservas) setMisReservas(dataReservas)
+    setCargando(false)
+  }
+
+  useEffect(() => {
+    cargarPerfilYReservas()
   }, [router, supabase])
 
   const handleCerrarSesion = async () => {
@@ -65,23 +76,16 @@ export default function DashboardAlumna() {
     router.push("/login")
   }
 
-  // Función para guardar los cambios en Supabase
   const handleGuardarCambios = async () => {
     setGuardando(true)
     try {
       const { error } = await supabase
         .from("perfiles")
-        .update({
-          nombre_completo: formData.nombre_completo,
-          telefono: formData.telefono,
-          contacto_urgencia: formData.contacto_urgencia,
-          direccion: formData.direccion
-        })
+        .update(formData)
         .eq("id", perfil.id)
 
       if (error) throw new Error("No pudimos actualizar tus datos.")
 
-      // Si salió bien, actualizamos la vista y cerramos el modo edición
       setPerfil({ ...perfil, ...formData })
       setEditando(false)
       toast.success("¡Datos actualizados con éxito!")
@@ -91,6 +95,57 @@ export default function DashboardAlumna() {
     } finally {
       setGuardando(false)
     }
+  }
+
+  // --- NUEVA LÓGICA MÁGICA: CANCELAR CON REGLA DE 12 HORAS ---
+  const handleCancelarReserva = async (reserva: any) => {
+    setProcesandoCancelacion(reserva.id)
+
+    try {
+      // 1. Validamos la regla de las 12 horas
+      const fechaHoraClase = new Date(`${reserva.fecha_clase}T${reserva.clases.horario}`)
+      const ahora = new Date()
+      
+      const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
+
+      if (diferenciaHoras < 12) {
+        throw new Error("No podés cancelar con menos de 12 horas de anticipación. Contactate con el estudio.")
+      }
+
+      // 2. Borramos la reserva
+      const { error: errReserva } = await supabase
+        .from("reservas")
+        .delete()
+        .eq("id", reserva.id)
+
+      if (errReserva) throw errReserva
+
+      // 3. Le devolvemos el crédito
+      const costo = reserva.clases?.costo_creditos ?? 1
+      const nuevosCreditos = perfil.creditos_clases + costo
+
+      const { error: errPerfil } = await supabase
+        .from("perfiles")
+        .update({ creditos_clases: nuevosCreditos })
+        .eq("id", perfil.id)
+
+      if (errPerfil) throw errPerfil
+
+      toast.success("Reserva cancelada. ¡Recuperaste tu clase!")
+      
+      // 4. Refrescamos todo
+      await cargarPerfilYReservas()
+
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setProcesandoCancelacion(null)
+    }
+  }
+
+  const formatearFechaHermosa = (fechaString: string) => {
+    const [año, mes, dia] = fechaString.split('-')
+    return `${dia}/${mes}`
   }
 
   if (cargando) {
@@ -105,7 +160,7 @@ export default function DashboardAlumna() {
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-900">
       
       {/* MENÚ LATERAL */}
-      <aside className="w-full md:w-64 bg-white border-r border-slate-200 p-6 flex flex-col shadow-sm">
+      <aside className="w-full md:w-64 bg-white border-r border-slate-200 p-6 flex flex-col shadow-sm shrink-0">
         <div className="mb-8 text-center md:text-left">
           <h2 className="text-2xl font-black tracking-tight text-slate-900">
             POLE<span className="text-fuchsia-600">KITTY</span>
@@ -117,15 +172,12 @@ export default function DashboardAlumna() {
           <Button variant={seccionActiva === "clases" ? "default" : "ghost"} className={`justify-start font-medium ${seccionActiva === "clases" ? "bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`} onClick={() => setSeccionActiva("clases")}>
             <CalendarDays className="mr-3 h-5 w-5" /> Mis Clases
           </Button>
-
           <Button variant={seccionActiva === "perfil" ? "default" : "ghost"} className={`justify-start font-medium ${seccionActiva === "perfil" ? "bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`} onClick={() => setSeccionActiva("perfil")}>
             <UserIcon className="mr-3 h-5 w-5" /> Mi Perfil
           </Button>
-
           <Button variant={seccionActiva === "pagos" ? "default" : "ghost"} className={`justify-start font-medium ${seccionActiva === "pagos" ? "bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`} onClick={() => setSeccionActiva("pagos")}>
             <CreditCard className="mr-3 h-5 w-5" /> Mis Pagos
           </Button>
-
           <Button variant={seccionActiva === "eventos" ? "default" : "ghost"} className={`justify-start font-medium ${seccionActiva === "eventos" ? "bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`} onClick={() => setSeccionActiva("eventos")}>
             <Sparkles className="mr-3 h-5 w-5" /> Eventos
           </Button>
@@ -154,123 +206,172 @@ export default function DashboardAlumna() {
               </div>
               <div>
                 <p className="text-xs text-fuchsia-600 font-semibold uppercase tracking-wider">Clases Disponibles</p>
-                <p className="text-xl font-bold text-slate-900">{perfil?.creditos_clases || 0}</p>
+                <p className="text-xl font-black text-slate-900">{perfil?.creditos_clases || 0}</p>
               </div>
             </div>
           </div>
 
           {/* SECCIÓN: CLASES */}
           {seccionActiva === "clases" && (
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="border-b border-slate-100 pb-4">
-                <CardTitle className="text-xl text-slate-800">Próximas reservas</CardTitle>
-                <CardDescription>No te olvides de cancelar con 24hs de anticipación.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="bg-slate-50 rounded-xl p-10 text-center border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
-                  <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-                    <CalendarDays className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-700 mb-1">No tenés clases a la vista</h3>
-                  <p className="text-slate-500 mb-6 text-sm max-w-sm">Tus próximas reservas aparecerán acá. ¡Anotate a una clase para empezar a entrenar!</p>
-                  <Button className="bg-fuchsia-600 hover:bg-fuchsia-700 shadow-sm">
-                    Ver grilla de horarios <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-8">
+              
+              {/* Tarjeta de Próximas Reservas */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="text-xl text-slate-800">Mis próximas reservas</CardTitle>
+                  <CardDescription>No te olvides de cancelar con 12hs de anticipación.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  
+                  {misReservas.length === 0 ? (
+                    <div className="text-center p-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                      Todavía no tenés reservas activas. ¡Anotate a una clase en la grilla de abajo!
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 max-h-[320px] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
+                      {misReservas.map(reserva => (
+                        <div key={reserva.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 rounded-xl bg-white shadow-sm hover:border-fuchsia-200 transition-colors gap-4">
+                          
+                          <div className="flex items-center gap-4">
+                            <div className="bg-fuchsia-50 p-3 rounded-xl text-fuchsia-700 flex flex-col items-center justify-center min-w-[70px]">
+                              <p className="text-xs font-bold uppercase">{reserva.clases?.dia_semana.slice(0,3)}</p>
+                              <p className="text-lg font-black">{formatearFechaHermosa(reserva.fecha_clase)}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                                {reserva.clases?.nivel}
+                                {reserva.clases?.es_evento && <Sparkles className="h-3 w-3 text-amber-500" />}
+                              </h4>
+                              <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                                <Clock className="h-3 w-3" /> {reserva.clases?.horario.slice(0,5)} hs
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* EL BOTÓN DE CANCELAR ACTUALIZADO */}
+                          <Button 
+                            variant="outline" 
+                            onClick={() => handleCancelarReserva(reserva)}
+                            disabled={procesandoCancelacion === reserva.id}
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 w-full sm:w-auto transition-colors"
+                          >
+                            {procesandoCancelacion === reserva.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Cancelar reserva
+                          </Button>
+                          
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                </CardContent>
+              </Card>
+
+              {/* Tarjeta de la Grilla para anotarse */}
+              <Card className="border-slate-200 shadow-sm overflow-hidden">
+                <CardHeader className="border-b border-fuchsia-100 pb-4 bg-fuchsia-50">
+                  <CardTitle className="text-xl text-fuchsia-900">Grilla de Horarios</CardTitle>
+                  <CardDescription className="text-fuchsia-700">Elegí tu clase y asegurá tu lugar en el caño.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6 bg-slate-50">
+                  <GrillaReservas 
+                    perfil={perfil} 
+                    onReservaExitosa={cargarPerfilYReservas} 
+                  />
+                </CardContent>
+              </Card>
+
+            </div>
           )}
 
-          {/* SECCIÓN: PERFIL (¡AHORA EDITABLE!) */}
+          {/* SECCIÓN: PERFIL */}
           {seccionActiva === "perfil" && (
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl text-slate-800">Ficha personal</CardTitle>
-                  <CardDescription>Mantené tu información de contacto actualizada.</CardDescription>
-                </div>
-                {!editando && (
-                  <Button variant="outline" size="sm" onClick={() => setEditando(true)} className="text-slate-600 border-slate-300 hover:bg-slate-50">
-                    <Pencil className="h-4 w-4 mr-2" /> Editar datos
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent className="pt-6">
-                
-                {!editando ? (
-                  // VISTA DE SOLO LECTURA
-                  <div className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre completo</p>
-                        <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.nombre_completo}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email registrado</p>
-                        <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100 text-slate-500">{perfil?.email} 🔒</p>
-                      </div>
-                    </div>
+             <Card className="border-slate-200 shadow-sm">
+             <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
+               <div>
+                 <CardTitle className="text-xl text-slate-800">Ficha personal</CardTitle>
+                 <CardDescription>Mantené tu información de contacto actualizada.</CardDescription>
+               </div>
+               {!editando && (
+                 <Button variant="outline" size="sm" onClick={() => setEditando(true)} className="text-slate-600 border-slate-300 hover:bg-slate-50">
+                   <Pencil className="h-4 w-4 mr-2" /> Editar datos
+                 </Button>
+               )}
+             </CardHeader>
+             <CardContent className="pt-6">
+               
+               {!editando ? (
+                 <div className="space-y-6">
+                   <div className="grid md:grid-cols-2 gap-6">
+                     <div className="space-y-1">
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre completo</p>
+                       <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.nombre_completo}</p>
+                     </div>
+                     <div className="space-y-1">
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email registrado</p>
+                       <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100 text-slate-500">{perfil?.email} 🔒</p>
+                     </div>
+                   </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">WhatsApp Personal</p>
-                        <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.telefono}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tel. Emergencia</p>
-                        <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.contacto_urgencia}</p>
-                      </div>
-                    </div>
+                   <div className="grid md:grid-cols-2 gap-6">
+                     <div className="space-y-1">
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">WhatsApp Personal</p>
+                       <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.telefono}</p>
+                     </div>
+                     <div className="space-y-1">
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tel. Emergencia</p>
+                       <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.contacto_urgencia}</p>
+                     </div>
+                   </div>
 
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección</p>
-                      <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.direccion}</p>
-                    </div>
-                  </div>
-                ) : (
-                  // VISTA DE EDICIÓN
-                  <div className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-nombre" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre completo</Label>
-                        <Input id="edit-nombre" value={formData.nombre_completo} onChange={(e) => setFormData({...formData, nombre_completo: e.target.value})} className="bg-white" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email (No editable)</Label>
-                        <Input value={perfil?.email} disabled className="bg-slate-100 text-slate-500 cursor-not-allowed" />
-                      </div>
-                    </div>
+                   <div className="space-y-1">
+                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección</p>
+                     <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.direccion}</p>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="space-y-6">
+                   <div className="grid md:grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                       <Label htmlFor="edit-nombre" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre completo</Label>
+                       <Input id="edit-nombre" value={formData.nombre_completo} onChange={(e) => setFormData({...formData, nombre_completo: e.target.value})} className="bg-white" />
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email (No editable)</Label>
+                       <Input value={perfil?.email} disabled className="bg-slate-100 text-slate-500 cursor-not-allowed" />
+                     </div>
+                   </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-tel" className="text-xs font-bold text-slate-500 uppercase tracking-wider">WhatsApp Personal</Label>
-                        <Input id="edit-tel" value={formData.telefono} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className="bg-white" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-urgencia" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tel. Emergencia</Label>
-                        <Input id="edit-urgencia" value={formData.contacto_urgencia} onChange={(e) => setFormData({...formData, contacto_urgencia: e.target.value})} className="bg-white" />
-                      </div>
-                    </div>
+                   <div className="grid md:grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                       <Label htmlFor="edit-tel" className="text-xs font-bold text-slate-500 uppercase tracking-wider">WhatsApp Personal</Label>
+                       <Input id="edit-tel" value={formData.telefono} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className="bg-white" />
+                     </div>
+                     <div className="space-y-2">
+                       <Label htmlFor="edit-urgencia" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tel. Emergencia</Label>
+                       <Input id="edit-urgencia" value={formData.contacto_urgencia} onChange={(e) => setFormData({...formData, contacto_urgencia: e.target.value})} className="bg-white" />
+                     </div>
+                   </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-dir" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dirección</Label>
-                      <Input id="edit-dir" value={formData.direccion} onChange={(e) => setFormData({...formData, direccion: e.target.value})} className="bg-white" />
-                    </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="edit-dir" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dirección</Label>
+                     <Input id="edit-dir" value={formData.direccion} onChange={(e) => setFormData({...formData, direccion: e.target.value})} className="bg-white" />
+                   </div>
 
-                    <div className="flex gap-3 pt-4 border-t border-slate-100">
-                      <Button onClick={handleGuardarCambios} disabled={guardando} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
-                        {guardando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Guardar cambios
-                      </Button>
-                      <Button variant="ghost" onClick={() => setEditando(false)} disabled={guardando} className="text-slate-500 hover:text-slate-700">
-                        <X className="mr-2 h-4 w-4" /> Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                   <div className="flex gap-3 pt-4 border-t border-slate-100">
+                     <Button onClick={handleGuardarCambios} disabled={guardando} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+                       {guardando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                       Guardar cambios
+                     </Button>
+                     <Button variant="ghost" onClick={() => setEditando(false)} disabled={guardando} className="text-slate-500 hover:text-slate-700">
+                       <X className="mr-2 h-4 w-4" /> Cancelar
+                     </Button>
+                   </div>
+                 </div>
+               )}
 
-              </CardContent>
-            </Card>
+             </CardContent>
+           </Card>
           )}
 
           {/* SECCIÓN: PAGOS */}
