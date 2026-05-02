@@ -14,7 +14,6 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
   const [historial, setHistorial] = useState<any[]>([])
   const [cargandoHistorial, setCargandoHistorial] = useState(true)
   
-  // Estado inicial del contador
   const [creditos, setCreditos] = useState<number>(Number(alumna.creditos_clases) || 0)
   const [packSeleccionado, setPackSeleccionado] = useState<number>(4) 
   const [procesandoAjuste, setProcesandoAjuste] = useState(false)
@@ -28,7 +27,6 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
     direccion: alumna.direccion || ""
   })
 
-  // Esta función es la nueva salvadora: obliga al sistema a buscar el número real de la base de datos
   const refrescarCreditosEnVivo = async () => {
     const { data } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
     if (data) {
@@ -49,10 +47,10 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
     }
     
     cargarHistorial()
-    refrescarCreditosEnVivo() // Al abrir el modal nos aseguramos de tener el número más fresco
+    refrescarCreditosEnVivo()
   }, [alumna.id, supabase])
 
-  // Lógica de ajuste a prueba de fallos
+  // --- LÓGICA DE AJUSTE CON GENERACIÓN DE RECIBOS ---
   const handleAjustarClases = async (operacion: 'sumar' | 'restar') => {
     setProcesandoAjuste(true)
     
@@ -62,7 +60,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
       const creditosActuales = Number(dbPerfil?.creditos_clases) || 0
       const cantidadDePack = Number(packSeleccionado)
 
-      // 2. Calculamos
+      // 2. Calculamos los nuevos créditos
       const ajuste = operacion === 'sumar' ? cantidadDePack : -cantidadDePack
       const nuevosCreditos = creditosActuales + ajuste
 
@@ -72,15 +70,31 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
         return
       }
 
-      // 3. Guardamos en la base
-      const { error } = await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", alumna.id)
-      if (error) throw error
+      // 3. Guardamos el nuevo saldo de la alumna
+      const { error: errorPerfil } = await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", alumna.id)
+      if (errorPerfil) throw errorPerfil
       
-      // 4. MAGIA: Refrescamos la pantalla y el fondo
+      // 4. NUEVO: GENERAR RECIBO SI FLOR LE SUMÓ UN PACK
+      if (operacion === 'sumar') {
+        const montoTotal = cantidadDePack * 5000 // Simulamos precio ($5000 por clase)
+        
+        const { error: errorPago } = await supabase
+          .from("pagos")
+          .insert({
+            perfil_id: alumna.id,
+            monto: montoTotal,
+            cantidad_clases: cantidadDePack,
+            metodo_pago: 'efectivo'
+          })
+          
+        if (errorPago) throw errorPago
+      }
+
+      // 5. Refrescamos la pantalla
       await refrescarCreditosEnVivo() 
       onUpdate() 
       
-      toast.success(operacion === 'sumar' ? `¡Se sumaron ${cantidadDePack} clases!` : `Se restaron ${cantidadDePack} clases.`)
+      toast.success(operacion === 'sumar' ? `¡Pack sumado y recibo generado!` : `Se restaron ${cantidadDePack} clases.`)
     } catch (error: any) {
       toast.error("Error al actualizar clases: " + error.message)
     } finally {
@@ -146,7 +160,6 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
             <div className="flex items-center gap-6">
               <div className="text-center">
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Clases Disponibles</p>
-                {/* EL NÚMERO VIOLETA AHORA ESTÁ CONECTADO EN VIVO */}
                 <div className="text-5xl font-black text-fuchsia-600 transition-all duration-300">{creditos}</div>
               </div>
             </div>
