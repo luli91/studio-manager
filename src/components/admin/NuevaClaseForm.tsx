@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Calendar as CalendarIcon, Clock, Users, FileText, DollarSign, Repeat } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, FileText, DollarSign, Repeat, GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,7 +18,8 @@ const obtenerDiaSemana = (fechaString: string) => {
 export default function NuevaClaseForm({ onCertado }: { onCertado: () => void }) {
   const supabase = createClient()
   const [cargando, setCargando] = useState(false)
-  
+  const [profesoras, setProfesoras] = useState<any[]>([])
+
   const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">("creditos")
   
   const [repetir, setRepetir] = useState(false)
@@ -31,8 +32,21 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
     cupo_maximo: 10,
     es_evento: false,
     precio: 0,
-    descripcion: ""
+    descripcion: "",
+    profesor_id: ""
   })
+  
+  useEffect(() => {
+    const cargarProfes = async () => {
+      const { data } = await supabase
+        .from("perfiles")
+        .select("id, nombre_completo")
+        .eq("rol", "profe")
+        .order("nombre_completo");
+      if (data) setProfesoras(data);
+    };
+    cargarProfes();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,7 +75,8 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
           precio: (clase.es_evento && formaDePago === "pesos") ? clase.precio : null,
           descripcion: clase.es_evento ? clase.descripcion : null,
           dia_semana: obtenerDiaSemana(fechaFormateada),
-          grupo_id: grupoId 
+          grupo_id: grupoId,
+          profesor_id: clase.profesor_id || null
         });
 
         fechaActual.setDate(fechaActual.getDate() + 7);
@@ -103,7 +118,21 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
           <Input type="number" min="1" required value={clase.cupo_maximo} onChange={e => setClase({...clase, cupo_maximo: parseInt(e.target.value) || 1})} />
         </div>
       </div>
-
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2 text-slate-900 font-bold">
+          <GraduationCap className="h-4 w-4 text-fuchsia-600"/> Profesora que dictará la clase
+        </Label>
+        <select 
+          className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-fuchsia-600 outline-none"
+          value={clase.profesor_id}
+          onChange={(e) => setClase({...clase, profesor_id: e.target.value})}
+        >
+          <option value="">Seleccionar profesora (opcional)</option>
+          {profesoras.map((p) => (
+            <option key={p.id} value={p.id}>{p.nombre_completo}</option>
+          ))}
+        </select>
+      </div>
       <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
