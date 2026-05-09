@@ -23,13 +23,25 @@ export default function VistaDashboard({ perfil, clasesHoy }: { perfil: any, cla
         </div>
       ) : (
         clasesHoy.map(clase => {
-          // Separamos las reservas en confirmadas y canceladas
+          const esAusente = clase.profesor_ausente_id === perfil?.id
           const reservasConfirmadas = clase.reservas?.filter((r: any) => r.estado !== 'cancelada') || []
           const reservasCanceladas = clase.reservas?.filter((r: any) => r.estado === 'cancelada') || []
 
           return (
-            <div key={clase.id} className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
+            <div key={clase.id} className={`bg-white rounded-[2.5rem] border ${esAusente ? 'border-red-300' : 'border-slate-200'} shadow-sm overflow-hidden mb-6 relative`}>
+              
+              {/* CARTEL DE AUSENCIA */}
+              {esAusente && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center p-8">
+                  <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-red-500/20">
+                    <AlertCircle className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Estás Ausente</h3>
+                  <p className="text-slate-600 font-medium mt-2">Flor liberó esta clase para que la tome una suplente.</p>
+                </div>
+              )}
+
+              <div className={`p-6 ${esAusente ? 'bg-slate-500' : 'bg-slate-900'} text-white flex justify-between items-center transition-colors`}>
                 <div>
                   <p className="text-fuchsia-400 text-[10px] font-black uppercase tracking-widest italic">Clase</p>
                   <h3 className="text-xl font-bold uppercase tracking-tighter">{clase.nivel}</h3>
@@ -38,8 +50,6 @@ export default function VistaDashboard({ perfil, clasesHoy }: { perfil: any, cla
               </div>
               
               <div className="p-6 space-y-6">
-                
-                {/* 1. LISTADO DE ASISTENCIA */}
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-3 italic flex justify-between items-center">
                     <span>Listado de asistencia ({reservasConfirmadas.length})</span>
@@ -76,10 +86,6 @@ export default function VistaDashboard({ perfil, clasesHoy }: { perfil: any, cla
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Phone className="h-3 w-3" /> WhatsApp</p>
                                   <p className="font-bold text-slate-700 text-sm">{res.perfiles?.telefono || "No disponible"}</p>
                                 </div>
-                                <div className="space-y-1">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Mail className="h-3 w-3" /> Correo</p>
-                                  <p className="font-bold text-slate-700 text-sm truncate">{res.perfiles?.email || "No disponible"}</p>
-                                </div>
                                 <div className="space-y-1 md:col-span-2">
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><MapPin className="h-3 w-3" /> Dirección</p>
                                   <p className="font-bold text-slate-700 text-sm uppercase">
@@ -99,7 +105,6 @@ export default function VistaDashboard({ perfil, clasesHoy }: { perfil: any, cla
                   )}
                 </div>
 
-                {/* 2. CUPOS LIBERADOS (CANCELACIONES) */}
                 {reservasCanceladas.length > 0 && (
                   <div className="mt-6 pt-6 border-t border-dashed border-slate-200">
                     <p className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2 mb-3 flex items-center gap-2">
@@ -122,7 +127,6 @@ export default function VistaDashboard({ perfil, clasesHoy }: { perfil: any, cla
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
           )

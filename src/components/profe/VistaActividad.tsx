@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { format, parseISO, isSameDay, isBefore, isAfter, isSameMonth, subMonths, addMonths, isSameWeek } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, CheckCircle2, Clock, ArrowRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, CheckCircle2, Clock, ArrowRight, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Date }) {
@@ -11,6 +11,9 @@ export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Da
   const realizadas = clasesDelMes.filter(c => isBefore(parseISO(c.fecha), hoy) && !isSameDay(parseISO(c.fecha), hoy))
   const paraHoyActividad = clasesDelMes.filter(c => isSameDay(parseISO(c.fecha), hoy))
   const futuras = clasesDelMes.filter(c => isAfter(parseISO(c.fecha), hoy) && !isSameDay(parseISO(c.fecha), hoy))
+
+  // LÓGICA DE PAGO: Solo se cuentan las clases donde NO se marcó ausencia
+  const realizadasAcreditadas = realizadas.filter(c => !c.profesor_ausente_id)
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in pb-20">
@@ -29,7 +32,7 @@ export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Da
           <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
             <CheckCircle2 className="h-3 w-3" /> Total Mes
           </p>
-          <p className="text-6xl font-black leading-none mt-2">{realizadas.length}</p>
+          <p className="text-6xl font-black leading-none mt-2">{realizadasAcreditadas.length}</p>
           <p className="text-[9px] text-slate-400 font-bold uppercase mt-2 italic">Ya dictadas</p>
         </div>
         <div className="w-px h-20 bg-white/10"></div>
@@ -38,7 +41,7 @@ export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Da
             <Clock className="h-3 w-3" /> Esta Semana
           </p>
           <p className="text-6xl font-black leading-none mt-2">
-            {realizadas.filter(c => isSameWeek(parseISO(c.fecha), hoy, { weekStartsOn: 1 })).length}
+            {realizadasAcreditadas.filter(c => isSameWeek(parseISO(c.fecha), hoy, { weekStartsOn: 1 })).length}
           </p>
           <p className="text-[9px] text-slate-400 font-bold uppercase mt-2 italic">Lunes a Domingo</p>
         </div>
@@ -49,18 +52,25 @@ export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Da
           <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Clases Realizadas ({realizadas.length})
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {realizadas.map(c => (
-            <div key={c.id} className="bg-emerald-50/30 border border-emerald-100 p-5 rounded-[2rem] flex justify-between items-center">
-              <div>
-                <p className="text-[10px] font-bold text-emerald-600 uppercase">{format(parseISO(c.fecha), 'EEE dd/MM', { locale: es })}</p>
-                <p className="font-bold text-slate-800 uppercase text-xs leading-none mt-1">{c.nivel}</p>
+          {realizadas.map(c => {
+            const esAusente = !!c.profesor_ausente_id;
+            return (
+              <div key={c.id} className={`border p-5 rounded-[2rem] flex justify-between items-center ${esAusente ? 'bg-red-50/30 border-red-100' : 'bg-emerald-50/30 border-emerald-100'}`}>
+                <div>
+                  <p className={`text-[10px] font-bold uppercase ${esAusente ? 'text-red-500' : 'text-emerald-600'}`}>{format(parseISO(c.fecha), 'EEE dd/MM', { locale: es })}</p>
+                  <p className={`font-bold uppercase text-xs leading-none mt-1 ${esAusente ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{c.nivel}</p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-xs font-black leading-none ${esAusente ? 'text-red-400 line-through' : 'text-slate-900'}`}>{c.horario.slice(0,5)}</p>
+                  {esAusente ? (
+                    <span className="text-[9px] font-black text-red-500 uppercase italic flex items-center justify-end gap-1 mt-1"><AlertCircle className="h-3 w-3" /> Ausente</span>
+                  ) : (
+                    <span className="text-[9px] font-black text-emerald-500 uppercase italic mt-1 block">Acreditada</span>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs font-black text-slate-900 leading-none">{c.horario.slice(0,5)}</p>
-                <span className="text-[9px] font-black text-emerald-500 uppercase italic">Acreditada</span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
           {realizadas.length === 0 && <p className="text-slate-400 text-xs italic py-2 ml-2">Sin registro previo.</p>}
         </div>
       </section>
@@ -70,16 +80,21 @@ export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Da
           <Clock className="h-4 w-4" /> Para Hoy ({paraHoyActividad.length})
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {paraHoyActividad.map(c => (
-            <div key={c.id} className="bg-white border-2 border-fuchsia-500 p-6 rounded-[2.5rem] shadow-lg shadow-fuchsia-100 flex justify-between items-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-fuchsia-500"></div>
-              <div>
-                <p className="text-xs font-black text-fuchsia-500 uppercase tracking-tighter">Pendiente de acreditación</p>
-                <p className="font-black text-slate-900 uppercase text-lg">{c.nivel}</p>
+          {paraHoyActividad.map(c => {
+            const esAusente = !!c.profesor_ausente_id;
+            return (
+              <div key={c.id} className={`bg-white border-2 p-6 rounded-[2.5rem] shadow-lg flex justify-between items-center relative overflow-hidden ${esAusente ? 'border-red-300 shadow-red-50' : 'border-fuchsia-500 shadow-fuchsia-100'}`}>
+                <div className={`absolute top-0 left-0 w-1 h-full ${esAusente ? 'bg-red-500' : 'bg-fuchsia-500'}`}></div>
+                <div>
+                  <p className={`text-xs font-black uppercase tracking-tighter ${esAusente ? 'text-red-500' : 'text-fuchsia-500'}`}>
+                    {esAusente ? 'Marcada como ausente' : 'Pendiente de acreditación'}
+                  </p>
+                  <p className={`font-black uppercase text-lg ${esAusente ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{c.nivel}</p>
+                </div>
+                <div className={`text-right text-xl font-black leading-none ${esAusente ? 'text-red-400 line-through' : 'text-slate-900'}`}>{c.horario.slice(0,5)} hs</div>
               </div>
-              <div className="text-right text-xl font-black text-slate-900 leading-none">{c.horario.slice(0,5)} hs</div>
-            </div>
-          ))}
+            )
+          })}
           {paraHoyActividad.length === 0 && <p className="text-slate-400 text-xs italic py-2 ml-2">No hay clases hoy.</p>}
         </div>
       </section>
@@ -89,15 +104,21 @@ export default function VistaActividad({ clases, hoy }: { clases: any[], hoy: Da
           <ArrowRight className="h-4 w-4 text-slate-300" /> Próximas Clases ({futuras.length})
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {futuras.sort((a,b) => parseISO(a.fecha).getTime() - parseISO(b.fecha).getTime()).map(c => (
-            <div key={c.id} className="bg-white border border-slate-200 p-5 rounded-[2rem] flex justify-between items-center">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">{format(parseISO(c.fecha), 'EEE dd/MM', { locale: es })}</p>
-                <p className="font-bold text-slate-700 uppercase text-xs leading-none mt-1">{c.nivel}</p>
+          {futuras.sort((a,b) => parseISO(a.fecha).getTime() - parseISO(b.fecha).getTime()).map(c => {
+            const esAusente = !!c.profesor_ausente_id;
+            return (
+              <div key={c.id} className={`bg-white border p-5 rounded-[2rem] flex justify-between items-center ${esAusente ? 'border-red-200 bg-red-50/30' : 'border-slate-200'}`}>
+                <div>
+                  <p className={`text-[10px] font-bold uppercase ${esAusente ? 'text-red-400' : 'text-slate-400'}`}>{format(parseISO(c.fecha), 'EEE dd/MM', { locale: es })}</p>
+                  <p className={`font-bold uppercase text-xs leading-none mt-1 ${esAusente ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{c.nivel}</p>
+                </div>
+                <div className="text-right">
+                   <div className={`text-xs font-black ${esAusente ? 'text-red-400 line-through' : 'text-slate-500'}`}>{c.horario.slice(0,5)} hs</div>
+                   {esAusente && <span className="text-[9px] font-black text-red-500 uppercase mt-1 block">Liberada</span>}
+                </div>
               </div>
-              <div className="text-right text-xs font-black text-slate-500">{c.horario.slice(0,5)} hs</div>
-            </div>
-          ))}
+            )
+          })}
           {futuras.length === 0 && <p className="text-slate-400 text-xs italic py-2 ml-2">No quedan clases programadas.</p>}
         </div>
       </section>
