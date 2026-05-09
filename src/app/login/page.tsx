@@ -54,8 +54,10 @@ const handleLogin = async (e: React.FormEvent) => {
       // Redirección inteligente
       if (perfil.rol === "admin") {
         router.push("/admin")
+      } else if (perfil.rol === "profe") {
+        router.push("/profe")
       } else {
-        router.push("/dashboard")
+        router.push("/alumna")
       }
     }
   } catch (err: any) {

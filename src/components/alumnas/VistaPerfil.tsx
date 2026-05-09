@@ -7,21 +7,42 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 
+const ZONAS: Record<string, string[]> = {
+  "CABA": ["Agronomía", "Almagro", "Balvanera", "Barracas", "Belgrano", "Boedo", "Caballito", "Chacarita", "Coghlan", "Colegiales", "Constitución", "Flores", "Floresta", "La Boca", "La Paternal", "Liniers", "Mataderos", "Monte Castro", "Monserrat", "Nueva Pompeya", "Núñez", "Palermo", "Parque Avellaneda", "Parque Chacabuco", "Parque Chas", "Parque Patricios", "Puerto Madero", "Recoleta", "Retiro", "Saavedra", "San Cristóbal", "San Nicolás", "San Telmo", "Vélez Sársfield", "Versalles", "Villa Crespo", "Villa del Parque", "Villa Devoto", "Villa General Mitre", "Villa Lugano", "Villa Luro", "Villa Ortúzar", "Villa Pueyrredón", "Villa Real", "Villa Riachuelo", "Villa Santa Rita", "Villa Soldati", "Villa Urquiza"],
+  "GBA Norte": ["Escobar", "José C. Paz", "Malvinas Argentinas", "Pilar", "San Fernando", "San Isidro", "San Martín", "Tigre", "Vicente López"],
+  "GBA Sur": ["Almirante Brown", "Avellaneda", "Berazategui", "Esteban Echeverría", "Ezeiza", "Florencio Varela", "Lanús", "Lomas de Zamora", "Quilmes"],
+  "GBA Oeste": [
+    "Hurlingham - Hurlingham", "Hurlingham - Villa Tesei", "Hurlingham - William Morris",
+    "Ituzaingó - Ituzaingó", "Ituzaingó - Villa Udaondo",
+    "La Matanza - Aldo Bonzi", "La Matanza - Casanova", "La Matanza - Catán", "La Matanza - Celina", "La Matanza - Ciudad Evita", "La Matanza - Gregorio de Laferrere", "La Matanza - La Tablada", "La Matanza - Lomas del Mirador", "La Matanza - Rafael Castillo", "La Matanza - Ramos Mejía", "La Matanza - San Justo", "La Matanza - Tapiales", "La Matanza - Virrey del Pino",
+    "Merlo - Merlo", "Merlo - San Antonio de Padua", "Merlo - Libertad",
+    "Moreno - Moreno", "Moreno - Paso del Rey",
+    "Morón - Morón", "Morón - Castelar", "Morón - Haedo", "Morón - El Palomar", "Morón - Villa Sarmiento",
+    "Tres de Febrero - Caseros", "Tres de Febrero - Ciudad Jardín", "Tres de Febrero - Ciudadela", "Tres de Febrero - Santos Lugares", "Tres de Febrero - Sáenz Peña", "Tres de Febrero - Villa Bosch"
+  ]
+};
+
 export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alActualizar: () => void }) {
   const supabase = createClient()
   const [editando, setEditando] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  
   const [formData, setFormData] = useState({
-    nombre_completo: "", telefono: "", contacto_urgencia: "", direccion: ""
+    nombre: "", apellido: "", telefono: "", contacto_urgencia: "", 
+    calle: "", numero_calle: "", provincia: "", barrio_localidad: ""
   })
 
   useEffect(() => {
     if (perfil) {
       setFormData({
-        nombre_completo: perfil.nombre_completo || "",
+        nombre: perfil.nombre || "",
+        apellido: perfil.apellido || "",
         telefono: perfil.telefono || "",
         contacto_urgencia: perfil.contacto_urgencia || "",
-        direccion: perfil.direccion || ""
+        calle: perfil.calle || "",
+        numero_calle: perfil.numero_calle || "",
+        provincia: perfil.provincia || "",
+        barrio_localidad: perfil.barrio_localidad || ""
       })
     }
   }, [perfil])
@@ -29,7 +50,15 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
   const handleGuardarCambios = async () => {
     setGuardando(true)
     try {
-      const { error } = await supabase.from("perfiles").update(formData).eq("id", perfil.id)
+      const nombreArmado = `${formData.nombre} ${formData.apellido}`.trim()
+      const direccionArmada = `${formData.calle} ${formData.numero_calle}, ${formData.barrio_localidad}, ${formData.provincia}`
+
+      const { error } = await supabase.from("perfiles").update({
+        ...formData,
+        nombre_completo: nombreArmado,
+        direccion: direccionArmada
+      }).eq("id", perfil.id)
+
       if (error) throw new Error("No pudimos actualizar tus datos.")
       
       setEditando(false)
@@ -61,7 +90,9 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-1">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre completo</p>
-                <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.nombre_completo}</p>
+                <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
+                  {perfil?.nombre} {perfil?.apellido}
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email registrado</p>
@@ -80,19 +111,21 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
             </div>
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección</p>
-              <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.direccion}</p>
+              <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
+                {perfil?.calle} {perfil?.numero_calle}, {perfil?.barrio_localidad} ({perfil?.provincia})
+              </p>
             </div>
           </div>
         ) : (
           <div className="space-y-6 animate-in slide-in-from-top-2">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre completo</Label>
-                <Input value={formData.nombre_completo} onChange={(e) => setFormData({...formData, nombre_completo: e.target.value})} className="bg-white" />
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre</Label>
+                <Input value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} className="bg-white" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email (No editable)</Label>
-                <Input value={perfil?.email} disabled className="bg-slate-100 text-slate-500 cursor-not-allowed" />
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Apellido</Label>
+                <Input value={formData.apellido} onChange={(e) => setFormData({...formData, apellido: e.target.value})} className="bg-white" />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
@@ -105,10 +138,60 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
                 <Input value={formData.contacto_urgencia} onChange={(e) => setFormData({...formData, contacto_urgencia: e.target.value})} className="bg-white" />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dirección</Label>
-              <Input value={formData.direccion} onChange={(e) => setFormData({...formData, direccion: e.target.value})} className="bg-white" />
+
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Calle</Label>
+                  <Input value={formData.calle} onChange={(e) => setFormData({...formData, calle: e.target.value})} className="bg-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Número</Label>
+                  <Input value={formData.numero_calle} onChange={(e) => setFormData({...formData, numero_calle: e.target.value})} className="bg-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Provincia</Label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                    value={formData.provincia} 
+                    onChange={e => setFormData({...formData, provincia: e.target.value, barrio_localidad: ""})}
+                  >
+                    <option value="" disabled>Seleccioná...</option>
+                    <option value="CABA">CABA</option>
+                    <option value="GBA Norte">GBA Norte</option>
+                    <option value="GBA Sur">GBA Sur</option>
+                    <option value="GBA Oeste">GBA Oeste</option>
+                    <option value="Otra Provincia">Otra Provincia</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Barrio / Localidad</Label>
+                  {ZONAS[formData.provincia] ? (
+                    <select
+                      className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                      value={formData.barrio_localidad}
+                      onChange={e => setFormData({...formData, barrio_localidad: e.target.value})}
+                    >
+                      <option value="" disabled>Elegí tu zona...</option>
+                      {ZONAS[formData.provincia].map(barrio => (
+                        <option key={barrio} value={barrio}>{barrio}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input 
+                      value={formData.barrio_localidad} 
+                      onChange={(e) => setFormData({...formData, barrio_localidad: e.target.value})} 
+                      placeholder={formData.provincia === "" ? "Elegí provincia" : "Tu localidad"} 
+                      disabled={formData.provincia === ""}
+                      className="bg-white"
+                    />
+                  )}
+                </div>
+              </div>
             </div>
+
             <div className="flex gap-3 pt-4 border-t border-slate-100">
               <Button onClick={handleGuardarCambios} disabled={guardando} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
                 {guardando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Guardar cambios

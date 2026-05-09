@@ -44,7 +44,7 @@ export default function ActualizarClavePage() {
       toast.error("Hubo un error al actualizar la clave. Es posible que el enlace haya expirado.")
     } else {
       toast.success("¡Contraseña actualizada con éxito!")
-      router.push("/dashboard") 
+      router.push("/alumna") 
     }
     setCargando(false)
   }

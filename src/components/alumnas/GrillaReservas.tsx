@@ -6,12 +6,11 @@ import { toast } from "sonner"
 import { Loader2, Clock, Users, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-// AHORA RECIBE LOS DATOS DE LA ALUMNA Y LA FUNCIÓN PARA ACTUALIZAR LA PANTALLA
 export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: any, onReservaExitosa: () => void }) {
   const supabase = createClient()
   const [clases, setClases] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
-  const [procesandoId, setProcesandoId] = useState<string | null>(null) // Para que el botón gire mientras guarda
+  const [procesandoId, setProcesandoId] = useState<string | null>(null)
 
   const [mesActual, setMesActual] = useState(new Date())
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(new Date().toISOString().split('T')[0])
@@ -23,14 +22,19 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
       .from("clases")
       .select(`
         *,
-        reservas (id, perfil_id) 
+        reservas (id, perfil_id, estado) 
       `)
       .gte("fecha", hoy)
       .order("fecha", { ascending: true })
       .order("horario", { ascending: true })
 
     if (data) {
-      setClases(data)
+      // Limpiamos las reservas para la vista de la grilla
+      const clasesConReservasLimpias = data.map(clase => ({
+        ...clase,
+        reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []
+      }))
+      setClases(clasesConReservasLimpias)
     }
     setCargando(false)
   }
@@ -39,24 +43,21 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
     cargarClasesDisponibles()
   }, [])
 
-  // --- LÓGICA MÁGICA DE RESERVA ---
   const handleReservar = async (clase: any) => {
     if (!perfil) return
     setProcesandoId(clase.id)
 
     try {
       const costo = clase.costo_creditos ?? 1
-      const anotadas = clase.reservas?.length || 0
+      const anotadas = clase.reservas_confirmadas?.length || 0
       const lugaresDisponibles = clase.cupo_maximo - anotadas
 
-      // 1. Validaciones
       if (lugaresDisponibles <= 0) throw new Error("La clase ya está llena.")
       if (perfil.creditos_clases < costo) throw new Error("No tenés suficientes clases en tu pack.")
       
-      const yaAnotada = clase.reservas?.some((r: any) => r.perfil_id === perfil.id)
+      const yaAnotada = clase.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil.id)
       if (yaAnotada) throw new Error("¡Ya estás anotada en esta clase!")
 
-      // 2. Guardar la reserva en la base de datos
       const { error: errReserva } = await supabase.from('reservas').insert({
         perfil_id: perfil.id,
         clase_id: clase.id,
@@ -65,7 +66,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
       })
       if (errReserva) throw errReserva
 
-      // 3. Descontarle la clase de su billetera virtual
       const nuevosCreditos = perfil.creditos_clases - costo
       const { error: errPerfil } = await supabase.from('perfiles')
         .update({ creditos_clases: nuevosCreditos })
@@ -74,9 +74,8 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
 
       toast.success("¡Lugar asegurado con éxito! 🎉")
       
-      // 4. Refrescamos todo para que la pantalla baile
-      await cargarClasesDisponibles() // Actualiza los cupos locales
-      onReservaExitosa() // Le avisa al Dashboard que actualice las reservas de arriba
+      await cargarClasesDisponibles() 
+      onReservaExitosa() 
 
     } catch (error: any) {
       toast.error(error.message)
@@ -85,7 +84,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
     }
   }
 
-  // Lógica del Calendario
   const cambiarMes = (offset: number) => {
     setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() + offset, 1))
   }
@@ -119,7 +117,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
   return (
     <div className="space-y-6">
       
-      {/* EL CALENDARIO INTERACTIVO */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" size="icon" onClick={() => cambiarMes(-1)} className="text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50">
@@ -165,7 +162,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
         </div>
       </div>
 
-      {/* LISTA DE CLASES */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-900 flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-fuchsia-600" />
@@ -179,10 +175,10 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
         ) : (
           <div className="grid gap-3">
             {clasesDelDiaSeleccionado.map((clase: any) => {
-              const anotadas = clase.reservas?.length || 0
+              const anotadas = clase.reservas_confirmadas?.length || 0
               const lugaresDisponibles = clase.cupo_maximo - anotadas
               const estaLlena = lugaresDisponibles <= 0
-              const yaAnotada = clase.reservas?.some((r: any) => r.perfil_id === perfil?.id)
+              const yaAnotada = clase.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil?.id)
 
               return (
                 <div key={clase.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-fuchsia-200 transition-colors">
@@ -212,7 +208,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                       </p>
                     </div>
 
-                    {/* EL BOTÓN MÁGICO */}
                     <Button 
                       onClick={() => handleReservar(clase)}
                       disabled={estaLlena || yaAnotada || procesandoId === clase.id}

@@ -39,7 +39,8 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
     
     // Traemos reservas, alumnas y PROFESORAS
     const [resReservas, resAlumnas, resProfes] = await Promise.all([
-      supabase.from("reservas").select("id, estado, fecha_clase, perfiles(id, nombre_completo, email)").eq("clase_id", clase.id),
+      // ACÁ ESTÁ EL CAMBIO 1: Traemos SOLO las confirmadas para que no se vean las canceladas en la lista activa
+      supabase.from("reservas").select("id, estado, fecha_clase, perfiles(id, nombre_completo, nombre, apellido, email)").eq("clase_id", clase.id).eq("estado", "confirmada"),
       supabase.from("perfiles").select("id, nombre_completo, email, creditos_clases").eq("rol", "alumna").order("nombre_completo"),
       supabase.from("perfiles").select("id, nombre_completo").eq("rol", "profe").order("nombre_completo")
     ])
@@ -86,7 +87,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
           perfil_id: alumnaSeleccionada, 
           clase_id: clase.id, 
           estado: "confirmada",
-          fecha_clase: clase.fecha 
+          fecha_clase: clase.fecha || new Date().toISOString().split('T')[0]
         }])
 
       if (errorReserva) throw errorReserva
@@ -123,14 +124,17 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
     setEliminando(true)
 
     try {
-      const { error } = await supabase.from("reservas").delete().eq("id", reservaAEliminar.id)
+      // ACÁ ESTÁ EL CAMBIO 2: Actualizamos a "cancelada" en vez de borrar
+      const { error } = await supabase.from("reservas").update({ estado: 'cancelada' }).eq("id", reservaAEliminar.id)
       if (error) throw error
 
       if (devolverClase) {
         const perfilId = reservaAEliminar.perfiles.id
         const { data: perfilActual } = await supabase.from("perfiles").select("creditos_clases").eq("id", perfilId).single()
         await supabase.from("perfiles").update({ creditos_clases: (perfilActual?.creditos_clases || 0) + 1 }).eq("id", perfilId)
-        toast.success("Clase devuelta")
+        toast.success("Clase devuelta y cupo liberado")
+      } else {
+        toast.success("Cupo liberado (sin devolución)")
       }
 
       cargarDatos()
@@ -181,16 +185,25 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
             ) : modoEdicion ? (
               /* --- VISTA DE EDICIÓN --- */
               <div className="space-y-4 animate-in slide-in-from-top-2">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
+                <div className="space-y-1">
                         <Label>Nombre / Nivel</Label>
-                        <Input value={datosClase.nivel} onChange={e => setDatosClase({...datosClase, nivel: e.target.value})} />
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                          value={datosClase.nivel} 
+                          onChange={e => setDatosClase({...datosClase, nivel: e.target.value})}
+                        >
+                          <option value="" disabled>Seleccioná una disciplina</option>
+                          <option value="Pole Sport">Pole Sport</option>
+                          <option value="Pole Exotic">Pole Exotic</option>
+                          <option value="Pole Basic">Pole Basic</option>
+                          <option value="Pole Spin">Pole Spin</option>
+                          <option value="Pole Mix">Pole Mix</option>
+                          <option value="Funcional">Funcional</option>
+                          <option value="Sensual Flow">Sensual Flow</option>
+                          <option value="Flex">Flex</option>
+                          <option value="Evento Especial">Evento Especial</option>
+                        </select>
                     </div>
-                    <div className="space-y-1">
-                        <Label>Horario</Label>
-                        <Input type="time" value={datosClase.horario} onChange={e => setDatosClase({...datosClase, horario: e.target.value})} />
-                    </div>
-                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -239,7 +252,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                       />
                     </div>
 
-                    {alumnasFiltradas.length > 0 && busquedaAlumna && (
+                    {alumnasFiltradas.length > 0 &&  (
                       <div className="max-h-36 overflow-y-auto bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 shadow-inner">
                         {alumnasFiltradas.map(a => (
                           <div 
@@ -272,17 +285,23 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                     <span className="text-sm font-normal text-slate-500">{reservas.length} / {clase.cupo_maximo} alumnas</span>
                   </h4>
                   <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl bg-white">
-                    {reservas.map((reserva) => (
-                      <div key={reserva.id} className="flex justify-between p-4 items-center">
-                        <div>
-                          <p className="font-bold text-slate-900">{reserva.perfiles?.nombre_completo}</p>
-                          <p className="text-xs text-slate-500">{reserva.perfiles?.email}</p>
+                    {reservas.length === 0 ? (
+                       <div className="p-4 text-center text-slate-400 text-sm">Nadie anotado todavía.</div>
+                    ) : (
+                      reservas.map((reserva) => (
+                        <div key={reserva.id} className="flex justify-between p-4 items-center">
+                          <div>
+                            <p className="font-bold text-slate-900">
+                               {reserva.perfiles?.nombre ? `${reserva.perfiles.nombre} ${reserva.perfiles.apellido}` : reserva.perfiles?.nombre_completo}
+                            </p>
+                            <p className="text-xs text-slate-500">{reserva.perfiles?.email}</p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => iniciarEliminacion(reserva)} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" /> Baja
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => iniciarEliminacion(reserva)} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" /> Baja
-                        </Button>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </>
@@ -304,7 +323,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
               </>
             ) : (
               <>
-                <h3 className="font-bold text-xl">¿Devolver crédito?</h3>
+                <h3 className="font-bold text-xl">¿Devolver clase?</h3>
                 <p className="text-slate-500 text-sm">¿Querés que recupere la clase en su cuenta?</p>
                 <Button onClick={() => confirmarEliminacion(true)} disabled={eliminando} className="w-full bg-fuchsia-600">Sí, devolver 1 clase</Button>
                 <Button onClick={() => confirmarEliminacion(false)} disabled={eliminando} variant="outline" className="w-full">No, solo borrar</Button>

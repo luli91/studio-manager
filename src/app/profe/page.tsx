@@ -29,7 +29,8 @@ export default function DashboardProfe() {
 
     const { data: dataClases, error } = await supabase
       .from("clases")
-      .select(`id, nivel, horario, fecha, dia_semana, reservas (id, perfiles (*))`)
+      // ACÁ ESTÁ EL CAMBIO: Agregamos "estado" adentro de reservas
+      .select(`id, nivel, horario, fecha, dia_semana, reservas (id, estado, perfiles (*))`)
       .eq("profesor_id", user.id)
 
     if (!error && dataClases) setClases(dataClases)

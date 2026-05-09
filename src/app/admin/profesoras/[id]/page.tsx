@@ -105,9 +105,12 @@ export default function DetalleProfe() {
         <div className="space-y-6">
           <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm text-center sticky top-8">
             <div className="h-28 w-28 rounded-[2rem] bg-slate-900 text-white flex items-center justify-center text-5xl font-black mx-auto mb-4 shadow-lg shadow-slate-900/20">
-              {profe?.nombre_completo?.charAt(0)}
+              {profe?.nombre?.charAt(0) || profe?.nombre_completo?.charAt(0)}
             </div>
-            <h2 className="text-2xl font-black text-slate-900 leading-none">{profe?.nombre_completo}</h2>
+            {/* AQUÍ MOSTRAMOS NOMBRE Y APELLIDO SEPARADOS */}
+            <h2 className="text-2xl font-black text-slate-900 leading-none">
+              {profe?.nombre} {profe?.apellido}
+            </h2>
             <p className="text-fuchsia-600 text-[10px] font-black uppercase tracking-widest mt-2">Profesora Titular</p>
             
             <div className="mt-8 space-y-4 text-left bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -117,8 +120,19 @@ export default function DetalleProfe() {
               <div className="flex items-center gap-3 text-slate-700 text-sm font-medium">
                 <Phone className="h-4 w-4 text-slate-400" /> {profe?.telefono || "Sin teléfono"}
               </div>
-              <div className="flex items-center gap-3 text-slate-700 text-sm font-medium">
-                <MapPin className="h-4 w-4 text-slate-400" /> {profe?.direccion || "Sin dirección"}
+              <div className="flex items-center gap-3 text-slate-700 text-sm font-medium items-start">
+                <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" /> 
+                {/* AQUÍ MOSTRAMOS LA DIRECCIÓN SEPARADA */}
+                <span>
+                  {profe?.calle ? (
+                    <>
+                      {profe.calle} {profe.numero_calle}, <br/>
+                      <span className="text-xs text-slate-500">{profe.barrio_localidad} ({profe.provincia})</span>
+                    </>
+                  ) : (
+                    profe?.direccion || "Sin dirección"
+                  )}
+                </span>
               </div>
             </div>
 
@@ -211,7 +225,6 @@ export default function DetalleProfe() {
         </div>
       </div>
 
-      {/* AQUÍ LLAMAMOS A NUESTRO COMPONENTE SEPARADO */}
       <ModalAsignarClase 
         isOpen={modalAbierto} 
         onClose={() => setModalAbierto(false)} 

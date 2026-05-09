@@ -29,8 +29,10 @@ export default function CallbackPage() {
           router.push("/completar-perfil") 
         } else if (perfil.rol === "admin") {
           router.push("/admin")
+        } else if (perfil.rol === "profe") {
+          router.push("/profe")
         } else {
-          router.push("/dashboard")
+          router.push("/alumna")
         }
       } else {
         // Si hubo un error y no hay usuario, la mandamos a loguearse de nuevo

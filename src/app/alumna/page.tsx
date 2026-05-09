@@ -35,6 +35,7 @@ export default function DashboardAlumna() {
       .from("reservas")
       .select(`id, estado, fecha_clase, clases (nivel, horario, dia_semana, es_evento, costo_creditos)`)
       .eq("perfil_id", user.id)
+      .eq("estado", "confirmada") // <-- SOLO MOSTRAMOS LAS CONFIRMADAS
       .gte("fecha_clase", hoy)
       .order("fecha_clase", { ascending: true })
 
@@ -64,13 +65,16 @@ export default function DashboardAlumna() {
       const ahora = new Date()
       const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
 
+      // REGLA DE LAS 12 HORAS:
       if (diferenciaHoras < 12) {
         throw new Error("No podés cancelar con menos de 12 horas de anticipación. Contactate con el estudio.")
       }
 
-      const { error: errReserva } = await supabase.from("reservas").delete().eq("id", reserva.id)
+      // 1. CAMBIAMOS EL ESTADO A CANCELADA (En vez de borrarla)
+      const { error: errReserva } = await supabase.from("reservas").update({ estado: 'cancelada' }).eq("id", reserva.id)
       if (errReserva) throw errReserva
 
+      // 2. LE DEVOLVEMOS EL CRÉDITO A LA ALUMNA
       const costo = reserva.clases?.costo_creditos ?? 1
       const nuevosCreditos = perfil.creditos_clases + costo
 
@@ -97,7 +101,7 @@ export default function DashboardAlumna() {
           <h2 className="text-2xl font-black tracking-tight text-slate-900">
             POLE<span className="text-fuchsia-600">KITTY</span>
           </h2>
-          <p className="text-sm font-medium text-slate-500 mt-1">¡Hola, {perfil?.nombre_completo?.split(' ')[0] || 'Alumna'}!</p>
+          <p className="text-sm font-medium text-slate-500 mt-1">¡Hola, {perfil?.nombre || 'Alumna'}!</p>
         </div>
 
         <nav className="flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 flex-1">

@@ -26,14 +26,19 @@ export default function AdminClasesPage() {
       .from("clases")
       .select(`
         *,
-        reservas (id)
+        reservas (id, estado)
       `)
       .gte("fecha", new Date().toISOString().split('T')[0])
       .order("fecha", { ascending: true })
       .order("horario", { ascending: true })
 
     if (data) {
-      setClases(data)
+      // Filtramos las reservas para quedarnos SOLO con las confirmadas
+      const clasesConReservasLimpias = data.map(clase => ({
+        ...clase,
+        reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []
+      }))
+      setClases(clasesConReservasLimpias)
     }
     setCargando(false)
   }
@@ -47,18 +52,51 @@ export default function AdminClasesPage() {
     setBorrando(true)
     
     try {
-      let query = supabase.from("clases").delete()
+      let queryClases = supabase.from("clases").select("id")
       
       if (tipo === 'una' || !claseABorrar.grupo_id) {
-        query = query.eq("id", claseABorrar.id)
+        queryClases = queryClases.eq("id", claseABorrar.id)
       } else {
-        query = query.eq("grupo_id", claseABorrar.grupo_id).gte("fecha", claseABorrar.fecha)
+        queryClases = queryClases.eq("grupo_id", claseABorrar.grupo_id).gte("fecha", claseABorrar.fecha)
+      }
+      
+      const { data: clasesAfectadas, error: errClases } = await queryClases
+      if (errClases) throw errClases
+
+      const clasesIds = clasesAfectadas.map(c => c.id)
+
+      if (clasesIds.length > 0) {
+        // Al borrar una clase, DEVOLVEMOS el crédito solo a las confirmadas
+        const { data: reservas, error: errRes } = await supabase
+          .from("reservas")
+          .select("id, perfil_id")
+          .in("clase_id", clasesIds)
+          .eq("estado", "confirmada")
+
+        if (errRes) throw errRes
+
+        if (reservas && reservas.length > 0) {
+          for (const res of reservas) {
+            const { data: perfil } = await supabase
+              .from("perfiles")
+              .select("creditos_clases")
+              .eq("id", res.perfil_id)
+              .single()
+
+            await supabase
+              .from("perfiles")
+              .update({ creditos_clases: (perfil?.creditos_clases || 0) + 1 })
+              .eq("id", res.perfil_id)
+          }
+
+          await supabase.from("reservas").delete().in("clase_id", clasesIds)
+        }
+
+        const { error: errBorrado } = await supabase.from("clases").delete().in("id", clasesIds)
+        if (errBorrado) throw errBorrado
       }
 
-      const { error } = await query
-      if (error) throw error
-
-      toast.success(tipo === 'una' ? "Clase eliminada" : "Serie de clases eliminada")
+      toast.success(tipo === 'una' ? "Clase eliminada y clases devueltas" : "Serie eliminada y clases devueltas")
       setClaseABorrar(null)
       cargarClases()
     } catch (error: any) {
@@ -198,7 +236,8 @@ export default function AdminClasesPage() {
                   <div className="mt-4 sm:mt-0 flex items-center gap-6">
                     <div className="text-right flex items-center gap-2 text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md">
                       <Users className="h-4 w-4" />
-                      <span className="text-sm font-bold">{clase.reservas?.length || 0} / {clase.cupo_maximo}</span>
+                      {/* USAMOS EL CONTADOR DE RESERVAS CONFIRMADAS */}
+                      <span className="text-sm font-bold">{clase.reservas_confirmadas?.length || 0} / {clase.cupo_maximo}</span>
                     </div>
                     
                     <div className="flex gap-2">
@@ -230,6 +269,13 @@ export default function AdminClasesPage() {
                 Vas a borrar la clase de <strong>{claseABorrar.nivel}</strong> del {formatearFecha(claseABorrar.fecha)}.
               </p>
 
+              {claseABorrar.reservas_confirmadas?.length > 0 && (
+                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs text-left mt-2">
+                  <AlertTriangle className="h-4 w-4 inline-block mr-1 mb-0.5 text-amber-600" />
+                  <strong>Tiene {claseABorrar.reservas_confirmadas.length} reserva(s) confirmada(s).</strong> El sistema cancelará las reservas y les devolverá 1 clase automáticamente a las alumnas.
+                </div>
+              )}
+              
               <div className="space-y-3 pt-4">
                 {claseABorrar.grupo_id && (
                   <Button onClick={() => confirmarBorrado('serie')} disabled={borrando} className="w-full bg-red-600 hover:bg-red-700 text-white">

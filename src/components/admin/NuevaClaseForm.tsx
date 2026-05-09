@@ -111,7 +111,22 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2 col-span-2">
           <Label>Nivel / Disciplina</Label>
-          <Input placeholder="Ej: Pole Sport, Elongación..." required value={clase.nivel} onChange={e => setClase({...clase, nivel: e.target.value})} />
+          <select 
+            className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+            value={clase.nivel} 
+            onChange={e => setClase({...clase, nivel: e.target.value})}
+          >
+            <option value="" disabled>Seleccioná una disciplina</option>
+            <option value="Pole Sport">Pole Sport</option>
+            <option value="Pole Exotic">Pole Exotic</option>
+            <option value="Pole Basic">Pole Basic</option>
+            <option value="Pole Spin">Pole Spin</option>
+            <option value="Pole Mix">Pole Mix</option>
+            <option value="Funcional">Funcional</option>
+            <option value="Sensual Flow">Sensual Flow</option>
+            <option value="Flex">Flex</option>
+            <option value="Evento Especial">Evento Especial</option>
+          </select>
         </div>
         <div className="space-y-2">
           <Label className="flex items-center gap-2"><Users className="h-4 w-4 text-fuchsia-600"/> Cupo</Label>
