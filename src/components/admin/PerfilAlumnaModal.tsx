@@ -60,6 +60,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
         .from("reservas")
         .select("id, estado, fecha_clase, clases(nivel, horario)")
         .eq("perfil_id", alumna.id)
+        .eq("estado", "confirmada") // MAGIA: Solo trae las reservas que SÍ están confirmadas
         .order("fecha_clase", { ascending: false })
 
       if (data) setHistorial(data)
@@ -321,7 +322,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                 ) : historial.length === 0 ? (
                   <div className="flex-1 flex flex-col justify-center items-center text-slate-400 text-sm p-6 text-center gap-2">
                     <CalendarDays className="h-8 w-8 text-slate-200" />
-                    Sin reservas aún.
+                    Sin reservas activas.
                   </div>
                 ) : (
                   <div className="overflow-y-auto divide-y divide-slate-100 flex-1">

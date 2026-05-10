@@ -3,15 +3,28 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Calendar as CalendarIcon, Clock, Users, FileText, DollarSign, Repeat, GraduationCap } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, FileText, DollarSign, Repeat, GraduationCap, Sparkles, Loader2, ListFilter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 
+// DICCIONARIO DE HORARIOS OFICIALES
+const CRONOGRAMA_OFICIAL: Record<string, {nivel: string, hora: string}[]> = {
+  "Lunes": [{nivel: "Pole Sport", hora: "18:00"}, {nivel: "Pole Exotic", hora: "19:15"}],
+  "Martes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Sensual Flow", hora: "17:45"}, {nivel: "Flex", hora: "19:00"}],
+  "Miércoles": [{nivel: "Pole Exotic", hora: "17:45"}, {nivel: "Pole Sport", hora: "19:15"}],
+  "Jueves": [{nivel: "Pole Basic", hora: "17:45"}, {nivel: "Pole Spin", hora: "19:00"}],
+  "Viernes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Pole Exotic", hora: "17:45"}, {nivel: "Pole Sport", hora: "19:15"}, {nivel: "Pole Exotic", hora: "20:30"}],
+  "Sábado": [{nivel: "Pole Mix", hora: "16:30"}],
+  "Domingo": []
+};
+
 const obtenerDiaSemana = (fechaString: string) => {
   const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  const fecha = new Date(fechaString + "T00:00:00"); 
+  // Usamos este método para evitar problemas de zona horaria al parsear
+  const [year, month, day] = fechaString.split('-');
+  const fecha = new Date(Number(year), Number(month) - 1, Number(day));
   return dias[fecha.getDay()];
 };
 
@@ -19,11 +32,9 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
   const supabase = createClient()
   const [cargando, setCargando] = useState(false)
   const [profesoras, setProfesoras] = useState<any[]>([])
-
-  const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">("creditos")
-  
   const [repetir, setRepetir] = useState(false)
   const [mesesRepeticion, setMesesRepeticion] = useState(1)
+  const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">("creditos")
 
   const [clase, setClase] = useState({
     fecha: "",
@@ -35,14 +46,14 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
     descripcion: "",
     profesor_id: ""
   })
-  
+
+  // Detectamos el día cuando cambia la fecha
+  const diaDeLaSemana = clase.fecha ? obtenerDiaSemana(clase.fecha) : "";
+  const opcionesDelDia = CRONOGRAMA_OFICIAL[diaDeLaSemana] || [];
+
   useEffect(() => {
     const cargarProfes = async () => {
-      const { data } = await supabase
-        .from("perfiles")
-        .select("id, nombre_completo")
-        .eq("rol", "profe")
-        .order("nombre_completo");
+      const { data } = await supabase.from("perfiles").select("id, nombre_completo").eq("rol", "profe").order("nombre_completo");
       if (data) setProfesoras(data);
     };
     cargarProfes();
@@ -50,12 +61,12 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!clase.es_evento && (!clase.nivel || !clase.horario)) return toast.error("Elegí una clase del listado");
+    
     setCargando(true)
-
     try {
       const grupoId = repetir ? crypto.randomUUID() : null;
       const cantidadSemanas = repetir ? (mesesRepeticion * 4) : 1;
-      
       const clasesAInsertar = [];
       let fechaActual = new Date(clase.fecha + "T00:00:00");
 
@@ -63,162 +74,155 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
         const year = fechaActual.getFullYear();
         const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
         const day = String(fechaActual.getDate()).padStart(2, '0');
-        const fechaFormateada = `${year}-${month}-${day}`;
+        const dateStr = `${year}-${month}-${day}`;
 
         clasesAInsertar.push({
           nivel: clase.nivel,
-          fecha: fechaFormateada, 
+          fecha: dateStr, 
           horario: clase.horario, 
           cupo_maximo: clase.cupo_maximo,
           es_evento: clase.es_evento,
           costo_creditos: (clase.es_evento && formaDePago === "pesos") ? 0 : 1,
           precio: (clase.es_evento && formaDePago === "pesos") ? clase.precio : null,
           descripcion: clase.es_evento ? clase.descripcion : null,
-          dia_semana: obtenerDiaSemana(fechaFormateada),
+          dia_semana: obtenerDiaSemana(dateStr),
           grupo_id: grupoId,
           profesor_id: clase.profesor_id || null
         });
-
         fechaActual.setDate(fechaActual.getDate() + 7);
       }
-
       const { error } = await supabase.from("clases").insert(clasesAInsertar)
-
       if (error) throw error
-
-      toast.success(repetir ? `¡Se crearon ${cantidadSemanas} clases con éxito! ✨` : "¡Clase creada con éxito! ✨")
+      toast.success(repetir ? `¡Se crearon ${cantidadSemanas} clases con éxito! ✨` : "¡Calendario actualizado! ✨")
       onCertado() 
-    } catch (error: any) {
-      toast.error("Error: " + error.message)
-    } finally {
-      setCargando(false)
-    }
+    } catch (error: any) { toast.error(error.message) } finally { setCargando(false) }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5 overflow-y-auto max-h-[85vh]">
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-6">
+      <div className="text-center space-y-1">
+        <h2 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">Programar Clase</h2>
+        <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Configurá la grilla del estudio</p>
+      </div>
+
+      {/* SWITCH EVENTO ESPECIAL */}
+      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between shadow-inner">
+        <div className="space-y-0.5">
+          <Label className="text-amber-900 font-bold flex items-center gap-2 leading-none cursor-pointer"><Sparkles className="h-4 w-4 text-amber-600"/> ¿Es un Evento Especial?</Label>
+          <p className="text-[10px] text-amber-700 font-medium">Workshops, clases libres o seminarios.</p>
+        </div>
+        <Switch 
+          checked={clase.es_evento} 
+          onCheckedChange={c => {
+            setClase({...clase, es_evento: c, nivel: "", horario: ""});
+          }} 
+        />
+      </div>
+
+      <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
         <div className="space-y-2">
-          <Label className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-fuchsia-600"/> Fecha de Inicio</Label>
-          <Input type="date" required value={clase.fecha} onChange={e => setClase({...clase, fecha: e.target.value})} />
-        </div>
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-fuchsia-600"/> Horario</Label>
-          <Input type="time" required value={clase.horario} onChange={e => setClase({...clase, horario: e.target.value})} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-2 col-span-2">
-          <Label>Nivel / Disciplina</Label>
-          <select 
-            className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
-            value={clase.nivel} 
-            onChange={e => setClase({...clase, nivel: e.target.value})}
-          >
-            <option value="" disabled>Seleccioná una disciplina</option>
-            <option value="Pole Sport">Pole Sport</option>
-            <option value="Pole Exotic">Pole Exotic</option>
-            <option value="Pole Basic">Pole Basic</option>
-            <option value="Pole Spin">Pole Spin</option>
-            <option value="Pole Mix">Pole Mix</option>
-            <option value="Funcional">Funcional</option>
-            <option value="Sensual Flow">Sensual Flow</option>
-            <option value="Flex">Flex</option>
-            <option value="Evento Especial">Evento Especial</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2"><Users className="h-4 w-4 text-fuchsia-600"/> Cupo</Label>
-          <Input type="number" min="1" required value={clase.cupo_maximo} onChange={e => setClase({...clase, cupo_maximo: parseInt(e.target.value) || 1})} />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2 text-slate-900 font-bold">
-          <GraduationCap className="h-4 w-4 text-fuchsia-600"/> Profesora que dictará la clase
-        </Label>
-        <select 
-          className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-fuchsia-600 outline-none"
-          value={clase.profesor_id}
-          onChange={(e) => setClase({...clase, profesor_id: e.target.value})}
-        >
-          <option value="">Seleccionar profesora (opcional)</option>
-          {profesoras.map((p) => (
-            <option key={p.id} value={p.id}>{p.nombre_completo}</option>
-          ))}
-        </select>
-      </div>
-      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label className="text-slate-900 font-bold text-base flex items-center gap-2">
-              <Repeat className="h-4 w-4 text-fuchsia-600"/> Repetir todas las semanas
-            </Label>
-            <p className="text-xs text-slate-500">Genera esta clase automáticamente en el calendario.</p>
-          </div>
-          <Switch 
-            checked={repetir} 
-            onCheckedChange={setRepetir}
-          />
+          <Label className="flex items-center gap-2 text-xs font-black uppercase text-slate-400 ml-2"><CalendarIcon className="h-4 w-4 text-fuchsia-600"/> 1. Elegí la fecha</Label>
+          <Input type="date" required className="rounded-xl h-12 bg-white" value={clase.fecha} onChange={e => setClase({...clase, fecha: e.target.value, nivel: "", horario: ""})} />
         </div>
 
-        {repetir && (
-          <div className="pt-3 border-t border-slate-200 space-y-2 animate-in fade-in slide-in-from-top-2">
-            <Label>¿Por cuánto tiempo querés generarla?</Label>
-            <select 
-              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-600"
-              value={mesesRepeticion}
-              onChange={(e) => setMesesRepeticion(Number(e.target.value))}
-            >
-              <option value={1}>Por 1 mes (4 clases)</option>
-              <option value={2}>Por 2 meses (8 clases)</option>
-              <option value={3}>Por 3 meses (12 clases)</option>
-              <option value={6}>Por medio año (24 clases)</option>
-            </select>
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 bg-fuchsia-50/50 rounded-xl border border-fuchsia-100 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label className="text-fuchsia-900 font-bold text-base">¿Es un evento especial?</Label>
-            <p className="text-xs text-fuchsia-600">Workshops, seminarios, clases de fotos, etc.</p>
-          </div>
-          <Switch checked={clase.es_evento} onCheckedChange={(checked: boolean) => setClase({...clase, es_evento: checked})} />
-        </div>
-
-        {clase.es_evento && (
-          <div className="pt-3 border-t border-fuchsia-100 space-y-4 animate-in fade-in slide-in-from-top-2">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><FileText className="h-4 w-4 text-fuchsia-600"/> Descripción (opcional)</Label>
-              <Input placeholder="Ej: Traer rodilleras y tacos..." value={clase.descripcion} onChange={e => setClase({...clase, descripcion: e.target.value})} />
-            </div>
-
-            <div className="space-y-3">
-              <Label>¿Cómo se paga este evento?</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-lg border transition-all ${formaDePago === "creditos" ? "bg-fuchsia-600 text-white border-fuchsia-600 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-fuchsia-300"}`}>Gasta 1 Clase</button>
-                <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-lg border transition-all ${formaDePago === "pesos" ? "bg-fuchsia-600 text-white border-fuchsia-600 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-fuchsia-300"}`}>Se cobra aparte</button>
-              </div>
-            </div>
-
-            {formaDePago === "pesos" && (
-              <div className="space-y-2 pt-2">
-                <Label className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-emerald-600"/> Precio de la entrada</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
-                  <Input type="number" min="0" className="pl-8 border-emerald-200 focus-visible:ring-emerald-500" placeholder="Ej: 15000" required value={clase.precio} onChange={e => setClase({...clase, precio: parseInt(e.target.value) || 0})} />
-                </div>
+        {!clase.es_evento && clase.fecha && (
+          <div className="space-y-2 animate-in fade-in">
+            <Label className="flex items-center gap-2 text-xs font-black uppercase text-slate-400 ml-2"><ListFilter className="h-4 w-4 text-fuchsia-600"/> 2. Clase de los {diaDeLaSemana}</Label>
+            {opcionesDelDia.length > 0 ? (
+              <select 
+                className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-4 font-bold text-slate-700 focus:border-fuchsia-500 focus:ring-0 outline-none"
+                value={clase.nivel && clase.horario ? `${clase.nivel}|${clase.horario}` : ""}
+                onChange={e => {
+                  const [n, h] = e.target.value.split('|');
+                  setClase({...clase, nivel: n, horario: h});
+                }}
+              >
+                <option value="" disabled>Seleccioná del listado...</option>
+                {opcionesDelDia.map(opc => (
+                  <option key={`${opc.nivel}-${opc.hora}`} value={`${opc.nivel}|${opc.hora}`}>
+                    {opc.hora} hs - {opc.nivel}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="p-3 bg-white rounded-xl border border-slate-200 text-slate-400 text-sm italic text-center">
+                No hay clases oficiales los {diaDeLaSemana}.
               </div>
             )}
           </div>
         )}
       </div>
 
-      <div className="flex gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCertado} className="text-slate-500">Cancelar</Button>
-        <Button type="submit" className="flex-1 bg-slate-900 text-white hover:bg-slate-800" disabled={cargando}>{cargando ? "Guardando..." : "Crear en Calendario"}</Button>
+      {clase.es_evento && (
+        <div className="space-y-4 p-5 bg-amber-50/30 border border-amber-100 rounded-2xl animate-in slide-in-from-right-2">
+           <div className="grid grid-cols-2 gap-3">
+             <div className="space-y-1">
+                <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Nombre</Label>
+                <Input placeholder="Ej: Workshop..." required value={clase.nivel} onChange={e => setClase({...clase, nivel: e.target.value})} className="bg-white h-12" />
+             </div>
+             <div className="space-y-1">
+                <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Horario</Label>
+                <Input type="time" required value={clase.horario} onChange={e => setClase({...clase, horario: e.target.value})} className="bg-white h-12" />
+             </div>
+           </div>
+           <div className="space-y-1">
+              <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Descripción (opcional)</Label>
+              <Input placeholder="Requisitos, elementos..." value={clase.descripcion} onChange={e => setClase({...clase, descripcion: e.target.value})} className="bg-white h-12" />
+           </div>
+           <div className="pt-2">
+             <Label className="text-xs font-bold text-slate-900 mb-2 block">Método de cobro:</Label>
+             <div className="grid grid-cols-2 gap-3">
+               <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-amber-500 text-white border-amber-500 shadow-md" : "bg-white text-slate-500 border-slate-200"}`}>Descuenta clase</button>
+               <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-amber-500 text-white border-amber-500 shadow-md" : "bg-white text-slate-500 border-slate-200"}`}>Se paga aparte</button>
+             </div>
+           </div>
+           {formaDePago === "pesos" && (
+             <div className="space-y-2 pt-2 animate-in fade-in">
+               <Label className="flex items-center gap-2 text-[10px] font-bold uppercase"><DollarSign className="h-4 w-4 text-emerald-600"/> Precio de la entrada</Label>
+               <div className="relative">
+                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                 <Input type="number" min="0" className="pl-8 h-12 bg-white border-emerald-200 focus-visible:ring-emerald-500" placeholder="Ej: 15000" required value={clase.precio} onChange={e => setClase({...clase, precio: parseInt(e.target.value) || 0})} />
+               </div>
+             </div>
+           )}
+        </div>
+      )}
+
+      {/* CONFIGURACIÓN GENERAL */}
+      <div className="grid grid-cols-2 gap-3 pt-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase font-bold text-slate-400 ml-2">Cupo Máximo</Label>
+          <Input type="number" min="1" value={clase.cupo_maximo} onChange={e => setClase({...clase, cupo_maximo: parseInt(e.target.value) || 1})} className="rounded-xl h-12 text-center font-bold text-lg" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase font-bold text-slate-400 ml-2 flex items-center gap-1"><GraduationCap className="h-3 w-3" /> Profe</Label>
+          <select className="w-full h-12 px-3 rounded-xl border border-slate-200 text-sm bg-white font-medium focus:ring-2 focus:ring-fuchsia-600 outline-none" value={clase.profesor_id} onChange={e => setClase({...clase, profesor_id: e.target.value})}>
+            <option value="">Sin asignar</option>
+            {profesoras.map(p => <option key={p.id} value={p.id}>{p.nombre_completo}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between shadow-inner">
+        <Label className="font-bold flex items-center gap-2 cursor-pointer text-slate-700"><Repeat className="h-5 w-5 text-fuchsia-600"/> Repetir semanalmente</Label>
+        <Switch checked={repetir} onCheckedChange={setRepetir} />
+      </div>
+
+      {repetir && (
+        <div className="flex gap-2 animate-in slide-in-from-top-2">
+          {[1, 2, 3, 6].map(m => (
+            <button key={m} type="button" onClick={() => setMesesRepeticion(m)} className={`flex-1 h-12 rounded-xl text-xs font-bold transition-all border-2 ${mesesRepeticion === m ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
+              {m === 6 ? '1/2 Año' : `${m} Mes${m>1?'es':''}`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        <Button type="button" variant="ghost" onClick={onCertado} className="rounded-2xl text-slate-400 font-bold uppercase tracking-widest text-xs h-14 px-8 hover:bg-slate-100">Cancelar</Button>
+        <Button type="submit" className="flex-1 bg-slate-900 hover:bg-fuchsia-600 text-white rounded-2xl font-black uppercase tracking-tighter italic h-14 text-lg shadow-lg active:scale-95 transition-all" disabled={cargando}>
+          {cargando ? <Loader2 className="animate-spin h-6 w-6" /> : "Crear en Calendario"}
+        </Button>
       </div>
     </form>
   )

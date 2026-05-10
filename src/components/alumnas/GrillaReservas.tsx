@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Loader2, Clock, Users, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
+import { Loader2, Clock, Users, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: any, onReservaExitosa: () => void }) {
@@ -14,6 +14,8 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
 
   const [mesActual, setMesActual] = useState(new Date())
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(new Date().toISOString().split('T')[0])
+
+  const numeroFlor = "5491112345678" 
 
   const cargarClasesDisponibles = async () => {
     const hoy = new Date().toISOString().split('T')[0]
@@ -29,7 +31,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
       .order("horario", { ascending: true })
 
     if (data) {
-      // Limpiamos las reservas para la vista de la grilla
       const clasesConReservasLimpias = data.map(clase => ({
         ...clase,
         reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []
@@ -58,12 +59,13 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
       const yaAnotada = clase.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil.id)
       if (yaAnotada) throw new Error("¡Ya estás anotada en esta clase!")
 
-      const { error: errReserva } = await supabase.from('reservas').insert({
+      // MAGIA DEL UPSERT PARA EVITAR ERROR DE UNIQUE CONSTRAINT
+      const { error: errReserva } = await supabase.from('reservas').upsert({
         perfil_id: perfil.id,
         clase_id: clase.id,
         fecha_clase: clase.fecha,
         estado: 'confirmada'
-      })
+      }, { onConflict: 'perfil_id,clase_id,fecha_clase' })
       if (errReserva) throw errReserva
 
       const nuevosCreditos = perfil.creditos_clases - costo
@@ -179,6 +181,8 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
               const lugaresDisponibles = clase.cupo_maximo - anotadas
               const estaLlena = lugaresDisponibles <= 0
               const yaAnotada = clase.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil?.id)
+              
+              const esEventoPago = clase.es_evento && clase.costo_creditos === 0 && clase.precio > 0
 
               return (
                 <div key={clase.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-fuchsia-200 transition-colors">
@@ -195,7 +199,7 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                         {clase.es_evento && <Sparkles className="h-4 w-4 text-amber-500" />}
                       </h4>
                       <p className="text-sm text-slate-500 mt-0.5">
-                        {clase.es_evento ? clase.descripcion || "Evento especial" : "Clase regular"}
+                        {esEventoPago ? `Evento Pago: $${clase.precio}` : clase.es_evento ? clase.descripcion || "Evento con crédito" : "Clase regular"}
                       </p>
                     </div>
                   </div>
@@ -208,19 +212,37 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                       </p>
                     </div>
 
-                    <Button 
-                      onClick={() => handleReservar(clase)}
-                      disabled={estaLlena || yaAnotada || procesandoId === clase.id}
-                      className={
-                        yaAnotada ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-                        estaLlena ? "bg-slate-100 text-slate-400" : 
-                        "bg-slate-900 hover:bg-fuchsia-600 text-white shadow-sm transition-colors"
-                      }
-                    >
-                      {procesandoId === clase.id ? <Loader2 className="h-4 w-4 animate-spin" /> :
-                       yaAnotada ? "Ya estás anotada" :
-                       estaLlena ? "Agotado" : "Anotarme"}
-                    </Button>
+                    {esEventoPago ? (
+                      <Button 
+                        onClick={() => {
+                          const msj = `Hola Flor! Me gustaría anotarme al evento de ${clase.nivel} el día ${fechaSeleccionada.split('-').reverse().join('/')} a las ${clase.horario.slice(0,5)}hs. ¿Me pasás los datos para abonar los $${clase.precio}?`
+                          window.open(`https://wa.me/${numeroFlor}?text=${encodeURIComponent(msj)}`, '_blank')
+                        }}
+                        disabled={estaLlena || yaAnotada}
+                        className={
+                          yaAnotada ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
+                          estaLlena ? "bg-slate-100 text-slate-400" : 
+                          "bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
+                        }
+                      >
+                        {yaAnotada ? "Ya estás anotada" : estaLlena ? "Agotado" : <><MessageCircle className="h-4 w-4 mr-2" /> Reservar ($)</>}
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => handleReservar(clase)}
+                        disabled={estaLlena || yaAnotada || procesandoId === clase.id}
+                        className={
+                          yaAnotada ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
+                          estaLlena ? "bg-slate-100 text-slate-400" : 
+                          "bg-slate-900 hover:bg-fuchsia-600 text-white shadow-sm transition-colors"
+                        }
+                      >
+                        {procesandoId === clase.id ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                         yaAnotada ? "Ya estás anotada" :
+                         estaLlena ? "Agotado" : "Anotarme"}
+                      </Button>
+                    )}
+
                   </div>
 
                 </div>

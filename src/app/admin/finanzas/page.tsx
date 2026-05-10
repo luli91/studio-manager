@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -37,7 +38,8 @@ export default function FinanzasAdmin() {
         
         setMetricas({
           total: totalMes,
-          cantidad: pagosMes.length
+          // Solo sumamos los "Packs" en cantidad, para que no sume las entradas sueltas o devoluciones en este contador
+          cantidad: pagosMes.filter(p => !p.concepto?.includes("Evento")).length
         })
       }
       setCargando(false)
@@ -72,7 +74,7 @@ export default function FinanzasAdmin() {
           </Link>
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Finanzas</h1>
-            <p className="text-slate-500 text-sm">Seguimiento de ingresos y ventas del estudio.</p>
+            <p className="text-slate-500 text-sm">Seguimiento de ingresos y devoluciones del estudio.</p>
           </div>
         </div>
         <Button variant="outline" className="gap-2 border-slate-300">
@@ -84,20 +86,20 @@ export default function FinanzasAdmin() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-emerald-600 text-white border-none shadow-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Recaudación del Mes</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Caja del Mes</CardTitle>
             <DollarSign className="h-5 w-5 opacity-80" />
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-black">${metricas.total.toLocaleString('es-AR')}</div>
             <p className="text-emerald-100 text-xs mt-4 flex items-center gap-1 font-medium">
-              <TrendingUp className="h-3 w-3" /> Total acumulado desde el día 1
+              <TrendingUp className="h-3 w-3" /> Total acumulado (con devoluciones restadas)
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">Ventas Realizadas</CardTitle>
+            <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">Packs Vendidos</CardTitle>
             <Package className="h-5 w-5 text-fuchsia-600" />
           </CardHeader>
           <CardContent>
@@ -130,21 +132,31 @@ export default function FinanzasAdmin() {
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No hay movimientos registrados.</td>
                 </tr>
               ) : (
-                pagos.map((pago) => (
-                  <tr key={pago.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-6 py-4 text-sm text-slate-500 font-medium">{formatearFecha(pago.fecha)}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-slate-900">{pago.perfiles?.nombre_completo || "Alumna eliminada"}</p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Pack {pago.cantidad_clases} clases</td>
-                    <td className="px-6 py-4">
-                      <span className="text-[10px] font-black uppercase px-2 py-1 bg-slate-100 text-slate-500 rounded-md border border-slate-200">{pago.metodo_pago}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="font-black text-slate-900 text-lg">${Number(pago.monto).toLocaleString('es-AR')}</p>
-                    </td>
-                  </tr>
-                ))
+                pagos.map((pago) => {
+                  const esDevolucion = Number(pago.monto) < 0;
+
+                  return (
+                    <tr key={pago.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="px-6 py-4 text-sm text-slate-500 font-medium">{formatearFecha(pago.fecha)}</td>
+                      <td className="px-6 py-4">
+                        <p className={`font-bold ${esDevolucion ? 'text-red-700' : 'text-slate-900'}`}>{pago.perfiles?.nombre_completo || "Alumna eliminada"}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-600">
+                        {pago.concepto ? pago.concepto : `Pack de ${pago.cantidad_clases} clases`}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md border ${esDevolucion ? 'bg-red-50 text-red-500 border-red-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          {pago.metodo_pago}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <p className={`font-black text-lg ${esDevolucion ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {esDevolucion ? '' : '+'} ${Number(pago.monto).toLocaleString('es-AR')}
+                        </p>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

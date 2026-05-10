@@ -39,34 +39,38 @@ export default function VistaClases({
             </div>
           ) : (
             <div className="grid gap-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
-              {misReservas.map(reserva => (
-                <div key={reserva.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 rounded-xl bg-white shadow-sm hover:border-fuchsia-200 transition-colors gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-fuchsia-50 p-3 rounded-xl text-fuchsia-700 flex flex-col items-center justify-center min-w-[70px]">
-                      <p className="text-xs font-bold uppercase">{reserva.clases?.dia_semana.slice(0,3)}</p>
-                      <p className="text-lg font-black">{formatearFechaHermosa(reserva.fecha_clase)}</p>
+              {misReservas.map(reserva => {
+                const esEvento = reserva.clases?.es_evento;
+
+                return (
+                  <div key={reserva.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl shadow-sm transition-colors gap-4 ${esEvento ? 'border-amber-200 bg-amber-50/30 hover:border-amber-300' : 'border-slate-200 bg-white hover:border-fuchsia-200'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`${esEvento ? 'bg-amber-100 text-amber-700' : 'bg-fuchsia-50 text-fuchsia-700'} p-3 rounded-xl flex flex-col items-center justify-center min-w-[70px]`}>
+                        <p className="text-xs font-bold uppercase">{reserva.clases?.dia_semana.slice(0,3)}</p>
+                        <p className="text-lg font-black">{formatearFechaHermosa(reserva.fecha_clase)}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                          {reserva.clases?.nivel}
+                          {esEvento && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider ml-1 flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>}
+                        </h4>
+                        <p className={`text-sm flex items-center gap-1 mt-0.5 ${esEvento ? 'text-amber-700 font-medium' : 'text-slate-500'}`}>
+                          <Clock className="h-3 w-3" /> {reserva.clases?.horario.slice(0,5)} hs
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 flex items-center gap-2">
-                        {reserva.clases?.nivel}
-                        {reserva.clases?.es_evento && <Sparkles className="h-3 w-3 text-amber-500" />}
-                      </h4>
-                      <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
-                        <Clock className="h-3 w-3" /> {reserva.clases?.horario.slice(0,5)} hs
-                      </p>
-                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => onCancelar(reserva)}
+                      disabled={procesandoCancelacion === reserva.id}
+                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 w-full sm:w-auto transition-colors"
+                    >
+                      {procesandoCancelacion === reserva.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Cancelar reserva
+                    </Button>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => onCancelar(reserva)}
-                    disabled={procesandoCancelacion === reserva.id}
-                    className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 w-full sm:w-auto transition-colors"
-                  >
-                    {procesandoCancelacion === reserva.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Cancelar reserva
-                  </Button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
