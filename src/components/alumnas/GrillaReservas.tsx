@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
 import { Loader2, Clock, Users, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
 
 export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: any, onReservaExitosa: () => void }) {
   const supabase = createClient()
@@ -59,7 +61,6 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
       const yaAnotada = clase.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil.id)
       if (yaAnotada) throw new Error("¡Ya estás anotada en esta clase!")
 
-      // MAGIA DEL UPSERT PARA EVITAR ERROR DE UNIQUE CONSTRAINT
       const { error: errReserva } = await supabase.from('reservas').upsert({
         perfil_id: perfil.id,
         clase_id: clase.id,
@@ -111,7 +112,7 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
   if (cargando) {
     return (
       <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-fuchsia-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -119,22 +120,22 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
   return (
     <div className="space-y-6">
       
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="icon" onClick={() => cambiarMes(-1)} className="text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50">
+          <Button variant="ghost" size="icon" onClick={() => cambiarMes(-1)} className="text-muted-foreground hover:text-foreground hover:bg-accent">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h3 className="font-bold text-slate-900 text-lg">
+          <h3 className="font-bold text-foreground text-lg">
             {nombresMeses[month]} {year}
           </h3>
-          <Button variant="ghost" size="icon" onClick={() => cambiarMes(1)} className="text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50">
+          <Button variant="ghost" size="icon" onClick={() => cambiarMes(1)} className="text-muted-foreground hover:text-foreground hover:bg-accent">
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
 
         <div className="grid grid-cols-7 gap-1 text-center mb-2">
           {diasSemana.map(dia => (
-            <div key={dia} className="text-xs font-bold text-slate-400 uppercase">{dia}</div>
+            <div key={dia} className="text-xs font-bold text-muted-foreground uppercase">{dia}</div>
           ))}
         </div>
 
@@ -152,12 +153,12 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                 onClick={() => setFechaSeleccionada(fechaStr)}
                 className={`
                   relative h-10 w-full rounded-lg flex items-center justify-center text-sm font-medium transition-all
-                  ${esSeleccionado ? 'bg-fuchsia-600 text-white shadow-md' : 'text-slate-700 hover:bg-fuchsia-50 hover:text-fuchsia-700'}
-                  ${esHoy && !esSeleccionado ? 'border border-fuchsia-200 text-fuchsia-600' : ''}
+                  ${esSeleccionado ? 'bg-primary text-primary-foreground shadow-md' : 'text-foreground hover:bg-accent hover:text-accent-foreground'}
+                  ${esHoy && !esSeleccionado ? 'border border-primary/30 text-primary' : ''}
                 `}
               >
                 {dia}
-                {tieneClase && <span className={`absolute bottom-1 w-1 h-1 rounded-full ${esSeleccionado ? 'bg-white' : 'bg-fuchsia-500'}`}></span>}
+                {tieneClase && <span className={`absolute bottom-1 w-1 h-1 rounded-full ${esSeleccionado ? 'bg-primary-foreground' : 'bg-primary'}`}></span>}
               </button>
             )
           })}
@@ -165,14 +166,14 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
       </div>
 
       <div className="space-y-4">
-        <h4 className="font-bold text-slate-900 flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-fuchsia-600" />
+        <h4 className="font-bold text-foreground flex items-center gap-2">
+          <CalendarIcon className="h-5 w-5 text-primary" />
           Clases del {fechaSeleccionada.split('-').reverse().join('/')}
         </h4>
 
         {clasesDelDiaSeleccionado.length === 0 ? (
-          <div className="text-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <p className="text-slate-500 text-sm">No hay clases programadas para este día.</p>
+          <div className="text-center p-8 bg-muted/30 rounded-xl border border-dashed border-border">
+            <p className="text-muted-foreground text-sm">No hay clases programadas para este día.</p>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -185,29 +186,29 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
               const esEventoPago = clase.es_evento && clase.costo_creditos === 0 && clase.precio > 0
 
               return (
-                <div key={clase.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-fuchsia-200 transition-colors">
+                <div key={clase.id} className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/50 transition-colors">
                   
                   <div className="flex gap-4 items-center">
-                    <div className={`p-3 rounded-xl text-center min-w-[75px] shrink-0 ${clase.es_evento ? 'bg-amber-100 text-amber-700' : 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100'}`}>
+                    <div className={`p-3 rounded-xl text-center min-w-[75px] shrink-0 ${clase.es_evento ? 'bg-secondary border border-border text-foreground' : 'bg-muted border border-border text-foreground'}`}>
                       <Clock className="h-4 w-4 mx-auto mb-1 opacity-70" />
                       <p className="text-lg font-black">{clase.horario.slice(0,5)}</p>
                     </div>
 
                     <div>
-                      <h4 className="font-bold text-slate-900 flex items-center gap-2 text-lg">
+                      <h4 className="font-bold text-foreground flex items-center gap-2 text-lg">
                         {clase.nivel}
-                        {clase.es_evento && <Sparkles className="h-4 w-4 text-amber-500" />}
+                        {clase.es_evento && <Sparkles className="h-4 w-4 text-primary" />}
                       </h4>
-                      <p className="text-sm text-slate-500 mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         {esEventoPago ? `Evento Pago: $${clase.precio}` : clase.es_evento ? clase.descripcion || "Evento con crédito" : "Clase regular"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 border-border pt-3 sm:pt-0">
                     <div className="text-center sm:text-right">
-                      <p className="text-xs font-bold text-slate-400 uppercase">Lugares</p>
-                      <p className={`text-sm font-bold flex items-center justify-center sm:justify-end gap-1 ${estaLlena ? 'text-red-500' : 'text-slate-700'}`}>
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Lugares</p>
+                      <p className={`text-sm font-bold flex items-center justify-center sm:justify-end gap-1 ${estaLlena ? 'text-destructive' : 'text-foreground'}`}>
                         <Users className="h-4 w-4" /> {anotadas} / {clase.cupo_maximo}
                       </p>
                     </div>
@@ -220,9 +221,9 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                         }}
                         disabled={estaLlena || yaAnotada}
                         className={
-                          yaAnotada ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-                          estaLlena ? "bg-slate-100 text-slate-400" : 
-                          "bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
+                          yaAnotada ? "bg-secondary text-foreground hover:bg-secondary/80" :
+                          estaLlena ? "bg-muted text-muted-foreground" : 
+                          "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-colors"
                         }
                       >
                         {yaAnotada ? "Ya estás anotada" : estaLlena ? "Agotado" : <><MessageCircle className="h-4 w-4 mr-2" /> Reservar ($)</>}
@@ -232,9 +233,9 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                         onClick={() => handleReservar(clase)}
                         disabled={estaLlena || yaAnotada || procesandoId === clase.id}
                         className={
-                          yaAnotada ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-                          estaLlena ? "bg-slate-100 text-slate-400" : 
-                          "bg-slate-900 hover:bg-fuchsia-600 text-white shadow-sm transition-colors"
+                          yaAnotada ? "bg-secondary text-foreground hover:bg-secondary/80" :
+                          estaLlena ? "bg-muted text-muted-foreground" : 
+                          "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-colors"
                         }
                       >
                         {procesandoId === clase.id ? <Loader2 className="h-4 w-4 animate-spin" /> :

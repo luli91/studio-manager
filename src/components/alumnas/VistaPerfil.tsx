@@ -72,14 +72,14 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm animate-in fade-in">
-      <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
+    <Card className="border-border shadow-sm animate-in fade-in bg-card">
+      <CardHeader className="border-b border-border pb-4 flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-xl text-slate-800">Ficha personal</CardTitle>
-          <CardDescription>Mantené tu información de contacto actualizada.</CardDescription>
+          <CardTitle className="text-xl text-foreground">Ficha personal</CardTitle>
+          <CardDescription className="text-muted-foreground">Mantené tu información de contacto actualizada.</CardDescription>
         </div>
         {!editando && (
-          <Button variant="outline" size="sm" onClick={() => setEditando(true)} className="text-slate-600 border-slate-300 hover:bg-slate-50">
+          <Button variant="outline" size="sm" onClick={() => setEditando(true)} className="text-foreground border-border hover:bg-accent">
             <Pencil className="h-4 w-4 mr-2" /> Editar datos
           </Button>
         )}
@@ -89,29 +89,29 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
           <div className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre completo</p>
-                <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nombre completo</p>
+                <p className="text-foreground font-medium bg-background px-3 py-2 rounded-md border border-border">
                   {perfil?.nombre} {perfil?.apellido}
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email registrado</p>
-                <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100 text-slate-500">{perfil?.email} 🔒</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email registrado</p>
+                <p className="text-muted-foreground font-medium bg-muted/30 px-3 py-2 rounded-md border border-border">{perfil?.email} 🔒</p>
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">WhatsApp Personal</p>
-                <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.telefono}</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">WhatsApp Personal</p>
+                <p className="text-foreground font-medium bg-background px-3 py-2 rounded-md border border-border">{perfil?.telefono}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tel. Emergencia</p>
-                <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">{perfil?.contacto_urgencia}</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tel. Emergencia</p>
+                <p className="text-foreground font-medium bg-background px-3 py-2 rounded-md border border-border">{perfil?.contacto_urgencia}</p>
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección</p>
-              <p className="text-slate-900 font-medium bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Dirección</p>
+              <p className="text-foreground font-medium bg-background px-3 py-2 rounded-md border border-border">
                 {perfil?.calle} {perfil?.numero_calle}, {perfil?.barrio_localidad} ({perfil?.provincia})
               </p>
             </div>
@@ -120,41 +120,41 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
           <div className="space-y-6 animate-in slide-in-from-top-2">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre</Label>
-                <Input value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} className="bg-white" />
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nombre</Label>
+                <Input value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Apellido</Label>
-                <Input value={formData.apellido} onChange={(e) => setFormData({...formData, apellido: e.target.value})} className="bg-white" />
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Apellido</Label>
+                <Input value={formData.apellido} onChange={(e) => setFormData({...formData, apellido: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">WhatsApp Personal</Label>
-                <Input value={formData.telefono} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className="bg-white" />
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">WhatsApp Personal</Label>
+                <Input value={formData.telefono} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tel. Emergencia</Label>
-                <Input value={formData.contacto_urgencia} onChange={(e) => setFormData({...formData, contacto_urgencia: e.target.value})} className="bg-white" />
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tel. Emergencia</Label>
+                <Input value={formData.contacto_urgencia} onChange={(e) => setFormData({...formData, contacto_urgencia: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg space-y-4">
+            <div className="p-4 bg-muted/30 border border-border rounded-lg space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Calle</Label>
-                  <Input value={formData.calle} onChange={(e) => setFormData({...formData, calle: e.target.value})} className="bg-white" />
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Calle</Label>
+                  <Input value={formData.calle} onChange={(e) => setFormData({...formData, calle: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Número</Label>
-                  <Input value={formData.numero_calle} onChange={(e) => setFormData({...formData, numero_calle: e.target.value})} className="bg-white" />
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Número</Label>
+                  <Input value={formData.numero_calle} onChange={(e) => setFormData({...formData, numero_calle: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Provincia</Label>
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Provincia</Label>
                   <select 
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={formData.provincia} 
                     onChange={e => setFormData({...formData, provincia: e.target.value, barrio_localidad: ""})}
                   >
@@ -167,10 +167,10 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Barrio / Localidad</Label>
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Barrio / Localidad</Label>
                   {ZONAS[formData.provincia] ? (
                     <select
-                      className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       value={formData.barrio_localidad}
                       onChange={e => setFormData({...formData, barrio_localidad: e.target.value})}
                     >
@@ -185,18 +185,18 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
                       onChange={(e) => setFormData({...formData, barrio_localidad: e.target.value})} 
                       placeholder={formData.provincia === "" ? "Elegí provincia" : "Tu localidad"} 
                       disabled={formData.provincia === ""}
-                      className="bg-white"
+                      className="bg-background border-input focus-visible:ring-ring"
                     />
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-slate-100">
-              <Button onClick={handleGuardarCambios} disabled={guardando} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+            <div className="flex gap-3 pt-4 border-t border-border mt-4">
+              <Button onClick={handleGuardarCambios} disabled={guardando} className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1">
                 {guardando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Guardar cambios
               </Button>
-              <Button variant="ghost" onClick={() => setEditando(false)} disabled={guardando} className="text-slate-500 hover:text-slate-700">
+              <Button variant="outline" onClick={() => setEditando(false)} disabled={guardando} className="text-foreground border-border hover:bg-accent">
                 <X className="mr-2 h-4 w-4" /> Cancelar
               </Button>
             </div>

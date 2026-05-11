@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 
-// DICCIONARIO DE HORARIOS OFICIALES
 const CRONOGRAMA_OFICIAL: Record<string, {nivel: string, hora: string}[]> = {
   "Lunes": [{nivel: "Pole Sport", hora: "18:00"}, {nivel: "Pole Exotic", hora: "19:15"}],
   "Martes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Sensual Flow", hora: "17:45"}, {nivel: "Flex", hora: "19:00"}],
@@ -22,7 +21,6 @@ const CRONOGRAMA_OFICIAL: Record<string, {nivel: string, hora: string}[]> = {
 
 const obtenerDiaSemana = (fechaString: string) => {
   const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  // Usamos este método para evitar problemas de zona horaria al parsear
   const [year, month, day] = fechaString.split('-');
   const fecha = new Date(Number(year), Number(month) - 1, Number(day));
   return dias[fecha.getDay()];
@@ -47,7 +45,6 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
     profesor_id: ""
   })
 
-  // Detectamos el día cuando cambia la fecha
   const diaDeLaSemana = clase.fecha ? obtenerDiaSemana(clase.fecha) : "";
   const opcionesDelDia = CRONOGRAMA_OFICIAL[diaDeLaSemana] || [];
 
@@ -99,17 +96,16 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-6">
+    <form onSubmit={handleSubmit} className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">Programar Clase</h2>
-        <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Configurá la grilla del estudio</p>
+        <h2 className="text-2xl font-black uppercase italic tracking-tighter text-foreground">Programar Clase</h2>
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest">Configurá la grilla del estudio</p>
       </div>
 
-      {/* SWITCH EVENTO ESPECIAL */}
-      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between shadow-inner">
+      <div className="p-4 bg-secondary/50 rounded-2xl border border-border flex items-center justify-between shadow-inner">
         <div className="space-y-0.5">
-          <Label className="text-amber-900 font-bold flex items-center gap-2 leading-none cursor-pointer"><Sparkles className="h-4 w-4 text-amber-600"/> ¿Es un Evento Especial?</Label>
-          <p className="text-[10px] text-amber-700 font-medium">Workshops, clases libres o seminarios.</p>
+          <Label className="text-foreground font-bold flex items-center gap-2 leading-none cursor-pointer"><Sparkles className="h-4 w-4 text-primary"/> ¿Es un Evento Especial?</Label>
+          <p className="text-[10px] text-muted-foreground font-medium">Workshops, clases libres o seminarios.</p>
         </div>
         <Switch 
           checked={clase.es_evento} 
@@ -119,18 +115,18 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
         />
       </div>
 
-      <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+      <div className="space-y-4 bg-muted/30 p-5 rounded-2xl border border-border">
         <div className="space-y-2">
-          <Label className="flex items-center gap-2 text-xs font-black uppercase text-slate-400 ml-2"><CalendarIcon className="h-4 w-4 text-fuchsia-600"/> 1. Elegí la fecha</Label>
-          <Input type="date" required className="rounded-xl h-12 bg-white" value={clase.fecha} onChange={e => setClase({...clase, fecha: e.target.value, nivel: "", horario: ""})} />
+          <Label className="flex items-center gap-2 text-xs font-black uppercase text-muted-foreground ml-2"><CalendarIcon className="h-4 w-4 text-primary"/> 1. Elegí la fecha</Label>
+          <Input type="date" required className="rounded-xl h-12 bg-background border-input focus-visible:ring-ring" value={clase.fecha} onChange={e => setClase({...clase, fecha: e.target.value, nivel: "", horario: ""})} />
         </div>
 
         {!clase.es_evento && clase.fecha && (
           <div className="space-y-2 animate-in fade-in">
-            <Label className="flex items-center gap-2 text-xs font-black uppercase text-slate-400 ml-2"><ListFilter className="h-4 w-4 text-fuchsia-600"/> 2. Clase de los {diaDeLaSemana}</Label>
+            <Label className="flex items-center gap-2 text-xs font-black uppercase text-muted-foreground ml-2"><ListFilter className="h-4 w-4 text-primary"/> 2. Clase de los {diaDeLaSemana}</Label>
             {opcionesDelDia.length > 0 ? (
               <select 
-                className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-4 font-bold text-slate-700 focus:border-fuchsia-500 focus:ring-0 outline-none"
+                className="flex h-12 w-full rounded-xl border border-input bg-background px-4 font-bold text-foreground focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-all"
                 value={clase.nivel && clase.horario ? `${clase.nivel}|${clase.horario}` : ""}
                 onChange={e => {
                   const [n, h] = e.target.value.split('|');
@@ -145,7 +141,7 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
                 ))}
               </select>
             ) : (
-              <div className="p-3 bg-white rounded-xl border border-slate-200 text-slate-400 text-sm italic text-center">
+              <div className="p-3 bg-background rounded-xl border border-border text-muted-foreground text-sm italic text-center">
                 No hay clases oficiales los {diaDeLaSemana}.
               </div>
             )}
@@ -154,64 +150,63 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
       </div>
 
       {clase.es_evento && (
-        <div className="space-y-4 p-5 bg-amber-50/30 border border-amber-100 rounded-2xl animate-in slide-in-from-right-2">
+        <div className="space-y-4 p-5 bg-secondary/30 border border-border rounded-2xl animate-in slide-in-from-right-2">
            <div className="grid grid-cols-2 gap-3">
              <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Nombre</Label>
-                <Input placeholder="Ej: Workshop..." required value={clase.nivel} onChange={e => setClase({...clase, nivel: e.target.value})} className="bg-white h-12" />
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Nombre</Label>
+                <Input placeholder="Ej: Workshop..." required value={clase.nivel} onChange={e => setClase({...clase, nivel: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
              </div>
              <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Horario</Label>
-                <Input type="time" required value={clase.horario} onChange={e => setClase({...clase, horario: e.target.value})} className="bg-white h-12" />
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Horario</Label>
+                <Input type="time" required value={clase.horario} onChange={e => setClase({...clase, horario: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
              </div>
            </div>
            <div className="space-y-1">
-              <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Descripción (opcional)</Label>
-              <Input placeholder="Requisitos, elementos..." value={clase.descripcion} onChange={e => setClase({...clase, descripcion: e.target.value})} className="bg-white h-12" />
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Descripción (opcional)</Label>
+              <Input placeholder="Requisitos, elementos..." value={clase.descripcion} onChange={e => setClase({...clase, descripcion: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
            </div>
            <div className="pt-2">
-             <Label className="text-xs font-bold text-slate-900 mb-2 block">Método de cobro:</Label>
+             <Label className="text-xs font-bold text-foreground mb-2 block">Método de cobro:</Label>
              <div className="grid grid-cols-2 gap-3">
-               <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-amber-500 text-white border-amber-500 shadow-md" : "bg-white text-slate-500 border-slate-200"}`}>Descuenta clase</button>
-               <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-amber-500 text-white border-amber-500 shadow-md" : "bg-white text-slate-500 border-slate-200"}`}>Se paga aparte</button>
+               <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Descuenta clase</button>
+               <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Se paga aparte</button>
              </div>
            </div>
            {formaDePago === "pesos" && (
              <div className="space-y-2 pt-2 animate-in fade-in">
-               <Label className="flex items-center gap-2 text-[10px] font-bold uppercase"><DollarSign className="h-4 w-4 text-emerald-600"/> Precio de la entrada</Label>
+               <Label className="flex items-center gap-2 text-[10px] font-bold uppercase"><DollarSign className="h-4 w-4 text-primary"/> Precio de la entrada</Label>
                <div className="relative">
-                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                 <Input type="number" min="0" className="pl-8 h-12 bg-white border-emerald-200 focus-visible:ring-emerald-500" placeholder="Ej: 15000" required value={clase.precio} onChange={e => setClase({...clase, precio: parseInt(e.target.value) || 0})} />
+                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                 <Input type="number" min="0" className="pl-8 h-12 bg-background border-input focus-visible:ring-ring" placeholder="Ej: 15000" required value={clase.precio} onChange={e => setClase({...clase, precio: parseInt(e.target.value) || 0})} />
                </div>
              </div>
            )}
         </div>
       )}
 
-      {/* CONFIGURACIÓN GENERAL */}
       <div className="grid grid-cols-2 gap-3 pt-2">
         <div className="space-y-1">
-          <Label className="text-[10px] uppercase font-bold text-slate-400 ml-2">Cupo Máximo</Label>
-          <Input type="number" min="1" value={clase.cupo_maximo} onChange={e => setClase({...clase, cupo_maximo: parseInt(e.target.value) || 1})} className="rounded-xl h-12 text-center font-bold text-lg" />
+          <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-2">Cupo Máximo</Label>
+          <Input type="number" min="1" value={clase.cupo_maximo} onChange={e => setClase({...clase, cupo_maximo: parseInt(e.target.value) || 1})} className="rounded-xl h-12 text-center font-bold text-lg bg-background border-input focus-visible:ring-ring" />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px] uppercase font-bold text-slate-400 ml-2 flex items-center gap-1"><GraduationCap className="h-3 w-3" /> Profe</Label>
-          <select className="w-full h-12 px-3 rounded-xl border border-slate-200 text-sm bg-white font-medium focus:ring-2 focus:ring-fuchsia-600 outline-none" value={clase.profesor_id} onChange={e => setClase({...clase, profesor_id: e.target.value})}>
+          <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-2 flex items-center gap-1"><GraduationCap className="h-3 w-3" /> Profe</Label>
+          <select className="w-full h-12 px-3 rounded-xl border border-input text-sm bg-background font-medium focus:ring-2 focus:ring-ring outline-none" value={clase.profesor_id} onChange={e => setClase({...clase, profesor_id: e.target.value})}>
             <option value="">Sin asignar</option>
             {profesoras.map(p => <option key={p.id} value={p.id}>{p.nombre_completo}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between shadow-inner">
-        <Label className="font-bold flex items-center gap-2 cursor-pointer text-slate-700"><Repeat className="h-5 w-5 text-fuchsia-600"/> Repetir semanalmente</Label>
+      <div className="p-4 bg-muted/30 rounded-2xl border border-border flex items-center justify-between shadow-inner">
+        <Label className="font-bold flex items-center gap-2 cursor-pointer text-foreground"><Repeat className="h-5 w-5 text-primary"/> Repetir semanalmente</Label>
         <Switch checked={repetir} onCheckedChange={setRepetir} />
       </div>
 
       {repetir && (
         <div className="flex gap-2 animate-in slide-in-from-top-2">
           {[1, 2, 3, 6].map(m => (
-            <button key={m} type="button" onClick={() => setMesesRepeticion(m)} className={`flex-1 h-12 rounded-xl text-xs font-bold transition-all border-2 ${mesesRepeticion === m ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
+            <button key={m} type="button" onClick={() => setMesesRepeticion(m)} className={`flex-1 h-12 rounded-xl text-xs font-bold transition-all border-2 ${mesesRepeticion === m ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-background text-muted-foreground border-border hover:border-muted-foreground/30'}`}>
               {m === 6 ? '1/2 Año' : `${m} Mes${m>1?'es':''}`}
             </button>
           ))}
@@ -219,8 +214,8 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
       )}
 
       <div className="flex gap-3 pt-4">
-        <Button type="button" variant="ghost" onClick={onCertado} className="rounded-2xl text-slate-400 font-bold uppercase tracking-widest text-xs h-14 px-8 hover:bg-slate-100">Cancelar</Button>
-        <Button type="submit" className="flex-1 bg-slate-900 hover:bg-fuchsia-600 text-white rounded-2xl font-black uppercase tracking-tighter italic h-14 text-lg shadow-lg active:scale-95 transition-all" disabled={cargando}>
+        <Button type="button" variant="outline" onClick={onCertado} className="rounded-2xl text-foreground font-bold uppercase tracking-widest text-xs h-14 px-8 border-border hover:bg-accent">Cancelar</Button>
+        <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-tighter italic h-14 text-lg shadow-lg active:scale-95 transition-all" disabled={cargando}>
           {cargando ? <Loader2 className="animate-spin h-6 w-6" /> : "Crear en Calendario"}
         </Button>
       </div>

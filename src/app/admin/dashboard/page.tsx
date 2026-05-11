@@ -14,14 +14,14 @@ export default function DashboardAdmin() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-slate-900"> {/* Fondo oscuro para diferenciar rápido que estás como admin */}
+    <div className="min-h-screen p-8 bg-background">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-700">
+        <div className="flex justify-between items-center bg-primary p-6 rounded-xl shadow-sm border border-border">
           <div>
-            <h1 className="text-2xl font-bold text-white">Panel de Administración</h1>
-            <p className="text-slate-400">Control total del estudio, cupos y pagos.</p>
+            <h1 className="text-2xl font-bold text-primary-foreground">Panel de Administración</h1>
+            <p className="text-primary-foreground/80">Control total del estudio, cupos y pagos.</p>
           </div>
-          <Button variant="destructive" onClick={handleCerrarSesion}>
+          <Button variant="outline" onClick={handleCerrarSesion} className="bg-background text-foreground hover:bg-secondary border-none">
             Cerrar Sesión
           </Button>
         </div>

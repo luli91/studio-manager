@@ -50,13 +50,13 @@ export default function ActualizarClavePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-lg border-border">
         <CardHeader className="space-y-2 text-center pb-6">
-          <CardTitle className="text-3xl font-bold tracking-tight text-slate-900">
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">
             Crear nueva contraseña
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-base text-muted-foreground">
             Ingresá tu nueva clave segura a continuación.
           </CardDescription>
         </CardHeader>
@@ -70,14 +70,14 @@ export default function ActualizarClavePage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   required
-                  className="bg-slate-50 pr-10"
+                  className="bg-background pr-10 border-input focus-visible:ring-ring"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -91,21 +91,21 @@ export default function ActualizarClavePage() {
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   required
-                  className="bg-slate-50 pr-10"
+                  className="bg-background pr-10 border-input focus-visible:ring-ring"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full mt-4 text-base h-11" disabled={cargando}>
+            <Button type="submit" className="w-full mt-4 text-base h-11 bg-primary hover:bg-primary/90 text-primary-foreground" disabled={cargando}>
               {cargando ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</>
               ) : (

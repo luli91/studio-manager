@@ -11,16 +11,16 @@ export default function VistaPagos({ misPagos }: { misPagos: any[] }) {
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm animate-in fade-in">
-      <CardHeader className="border-b border-slate-100 pb-4">
-        <CardTitle className="text-xl text-slate-800">Historial de compras</CardTitle>
-        <CardDescription>Revisá tus recibos y los packs que compraste.</CardDescription>
+    <Card className="border-border shadow-sm animate-in fade-in bg-card">
+      <CardHeader className="border-b border-border pb-4">
+        <CardTitle className="text-xl text-foreground">Historial de compras</CardTitle>
+        <CardDescription className="text-muted-foreground">Revisá tus recibos y los packs que compraste.</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         {misPagos.length === 0 ? (
           <div className="text-center py-12">
-            <CreditCard className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No hay pagos registrados todavía.</p>
+            <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground font-medium">No hay pagos registrados todavía.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -28,21 +28,21 @@ export default function VistaPagos({ misPagos }: { misPagos: any[] }) {
               const esEvento = pago.concepto && pago.concepto.includes("Evento");
 
               return (
-                <div key={pago.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-white shadow-sm hover:border-fuchsia-200 transition-colors">
+                <div key={pago.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-background shadow-sm hover:border-primary/50 transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className={`${esEvento ? 'bg-amber-100 text-amber-600' : 'bg-emerald-50 text-emerald-600'} p-3 rounded-full`}>
+                    <div className={`${esEvento ? 'bg-secondary text-primary' : 'bg-muted text-foreground'} p-3 rounded-full border border-border`}>
                       {esEvento ? <Sparkles className="h-6 w-6" /> : <CreditCard className="h-6 w-6" />}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">
+                      <p className="font-bold text-foreground">
                         {pago.concepto ? pago.concepto : `Pack de ${pago.cantidad_clases || 0} clases`}
                       </p>
-                      <p className="text-sm text-slate-500 capitalize">{formatearFechaHermosa(pago.fecha)} • {pago.metodo_pago}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{formatearFechaHermosa(pago.fecha)} • {pago.metodo_pago}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-black text-slate-900">${pago.monto}</p>
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded-md uppercase tracking-wider">Aprobado</span>
+                    <p className="text-lg font-black text-foreground">${pago.monto}</p>
+                    <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded-md uppercase tracking-wider">Aprobado</span>
                   </div>
                 </div>
               )

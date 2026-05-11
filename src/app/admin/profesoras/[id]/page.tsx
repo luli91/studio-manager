@@ -25,7 +25,6 @@ export default function DetalleProfe() {
   const [cargando, setCargando] = useState(true)
   const [modalAbierto, setModalAbierto] = useState(false)
 
-  // NUEVOS ESTADOS PARA EL MODAL DE AUSENCIA
   const [claseAAusentar, setClaseAAusentar] = useState<any | null>(null)
   const [marcandoAusencia, setMarcandoAusencia] = useState(false)
 
@@ -100,49 +99,49 @@ export default function DetalleProfe() {
   const totalMesActual = clasesRealizadas.filter(c => isSameMonth(parseISO(c.fecha), hoy)).length
   const totalSemanaActual = clasesRealizadas.filter(c => isSameWeek(parseISO(c.fecha), hoy, { weekStartsOn: 1 })).length
 
-  if (cargando) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-fuchsia-600 h-10 w-10" /></div>
+  if (cargando) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-primary h-10 w-10" /></div>
 
   const TarjetaClase = ({ clase, tipo }: { clase: any, tipo: 'hoy' | 'proxima' | 'historial' }) => {
     const esAusente = clase.profesor_ausente_id === id;
     const esEvento = clase.es_evento;
     
-    let colorBorde = "border-slate-200";
-    let colorFondoDia = "bg-slate-100 text-slate-500";
+    let colorBorde = "border-border";
+    let colorFondoDia = "bg-secondary text-secondary-foreground";
     let etiqueta = null;
 
     if (esAusente) {
-      colorBorde = "border-red-200 bg-red-50/30";
-      colorFondoDia = "bg-red-100 text-red-600";
-      etiqueta = <span className="text-[9px] font-black text-red-600 uppercase bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertCircle className="h-3 w-3"/> Ausente</span>;
+      colorBorde = "border-muted bg-muted/30";
+      colorFondoDia = "bg-muted text-muted-foreground";
+      etiqueta = <span className="text-[9px] font-black text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded-full flex items-center gap-1"><AlertCircle className="h-3 w-3"/> Ausente</span>;
     } else if (esEvento) {
-       colorBorde = "border-amber-200 bg-amber-50/30";
-       colorFondoDia = "bg-amber-100 text-amber-700";
-       etiqueta = <span className="text-[9px] font-black text-amber-600 uppercase bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>;
+       colorBorde = "border-primary bg-primary/10";
+       colorFondoDia = "bg-primary text-primary-foreground";
+       etiqueta = <span className="text-[9px] font-black text-primary-foreground uppercase bg-primary px-2 py-0.5 rounded-full flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>;
     } else if (tipo === 'hoy') {
-      colorBorde = "border-fuchsia-300 shadow-md bg-fuchsia-50/30";
-      colorFondoDia = "bg-fuchsia-600 text-white";
-      etiqueta = <span className="text-[9px] font-black text-fuchsia-600 uppercase bg-fuchsia-100 px-2 py-0.5 rounded-full animate-pulse">Hoy</span>;
+      colorBorde = "border-primary shadow-md bg-card";
+      colorFondoDia = "bg-primary text-primary-foreground";
+      etiqueta = <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">Hoy</span>;
     } else if (tipo === 'historial') {
-      colorFondoDia = "bg-emerald-100 text-emerald-700";
-      etiqueta = <span className="text-[9px] font-black text-emerald-600 uppercase bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Dictada</span>;
+      colorFondoDia = "bg-secondary text-secondary-foreground";
+      etiqueta = <span className="text-[9px] font-black text-secondary-foreground uppercase bg-secondary px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Dictada</span>;
     } else {
-      colorFondoDia = "bg-blue-100 text-blue-700";
-      etiqueta = <span className="text-[9px] font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded-full">Programada</span>;
+      colorFondoDia = "bg-secondary text-secondary-foreground";
+      etiqueta = <span className="text-[9px] font-black text-secondary-foreground uppercase bg-secondary px-2 py-0.5 rounded-full">Programada</span>;
     }
 
     return (
-      <div className={`p-5 bg-white border ${colorBorde} rounded-[2rem] flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-all group`}>
+      <div className={`p-5 bg-card border ${colorBorde} rounded-[2rem] flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-all group`}>
         <div className="flex items-center gap-4">
           <div className={`p-3 rounded-2xl text-center min-w-[4rem] shadow-sm ${colorFondoDia}`}>
             <p className="text-[10px] font-black uppercase leading-none mb-1 opacity-80">{format(parseISO(clase.fecha), 'EEE', { locale: es })}</p>
             <p className="text-xl font-black leading-none">{format(parseISO(clase.fecha), 'dd')}</p>
           </div>
           <div>
-            <p className={`font-bold uppercase text-lg leading-tight tracking-tight ${esAusente ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+            <p className={`font-bold uppercase text-lg leading-tight tracking-tight ${esAusente ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
               {clase.nivel}
             </p>
             <div className="flex items-center gap-3 mt-1">
-              <p className="text-xs font-bold text-slate-500 flex items-center gap-1">
+              <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {clase.horario.slice(0,5)} hs
               </p>
               {etiqueta}
@@ -154,7 +153,7 @@ export default function DetalleProfe() {
           <Button 
             onClick={() => setClaseAAusentar(clase)} 
             variant="ghost" 
-            className="bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl font-bold text-xs h-10 transition-colors self-end sm:self-auto opacity-100 md:opacity-0 md:group-hover:opacity-100"
+            className="bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl font-bold text-xs h-10 transition-colors self-end sm:self-auto opacity-100 md:opacity-0 md:group-hover:opacity-100"
           >
             <UserMinus className="h-4 w-4 mr-2" /> Faltará (Liberar)
           </Button>
@@ -167,7 +166,7 @@ export default function DetalleProfe() {
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in">
       <div className="flex items-center justify-between">
         <Link href="/admin/profesoras">
-          <Button variant="ghost" className="gap-2 text-slate-500 hover:text-slate-900 bg-white shadow-sm border border-slate-200 rounded-2xl">
+          <Button variant="outline" className="gap-2 text-muted-foreground hover:text-foreground bg-card shadow-sm border border-border rounded-2xl">
             <ArrowLeft className="h-4 w-4" /> Volver al Staff
           </Button>
         </Link>
@@ -176,29 +175,29 @@ export default function DetalleProfe() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         <div className="space-y-6">
-          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm text-center sticky top-8">
-            <div className="h-28 w-28 rounded-[2rem] bg-slate-900 text-white flex items-center justify-center text-5xl font-black mx-auto mb-4 shadow-lg shadow-slate-900/20">
+          <div className="bg-card p-8 rounded-[3rem] border border-border shadow-sm text-center sticky top-8">
+            <div className="h-28 w-28 rounded-[2rem] bg-primary text-primary-foreground flex items-center justify-center text-5xl font-black mx-auto mb-4 shadow-lg shadow-primary/20">
               {profe?.nombre?.charAt(0) || profe?.nombre_completo?.charAt(0)}
             </div>
-            <h2 className="text-2xl font-black text-slate-900 leading-none">
+            <h2 className="text-2xl font-black text-foreground leading-none">
               {profe?.nombre} {profe?.apellido}
             </h2>
-            <p className="text-fuchsia-600 text-[10px] font-black uppercase tracking-widest mt-2">Profesora Titular</p>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-2">Profesora Titular</p>
             
-            <div className="mt-8 space-y-4 text-left bg-slate-50 p-6 rounded-3xl border border-slate-100">
-              <div className="flex items-center gap-3 text-slate-700 text-sm font-medium">
-                <Mail className="h-4 w-4 text-slate-400" /> <span className="truncate">{profe?.email}</span>
+            <div className="mt-8 space-y-4 text-left bg-muted/30 p-6 rounded-3xl border border-border">
+              <div className="flex items-center gap-3 text-foreground text-sm font-medium">
+                <Mail className="h-4 w-4 text-muted-foreground" /> <span className="truncate">{profe?.email}</span>
               </div>
-              <div className="flex items-center gap-3 text-slate-700 text-sm font-medium">
-                <Phone className="h-4 w-4 text-slate-400" /> {profe?.telefono || "Sin teléfono"}
+              <div className="flex items-center gap-3 text-foreground text-sm font-medium">
+                <Phone className="h-4 w-4 text-muted-foreground" /> {profe?.telefono || "Sin teléfono"}
               </div>
-              <div className="flex items-center gap-3 text-slate-700 text-sm font-medium items-start">
-                <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" /> 
+              <div className="flex items-center gap-3 text-foreground text-sm font-medium items-start">
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
                 <span>
                   {profe?.calle ? (
                     <>
                       {profe.calle} {profe.numero_calle}, <br/>
-                      <span className="text-xs text-slate-500">{profe.barrio_localidad} ({profe.provincia})</span>
+                      <span className="text-xs text-muted-foreground">{profe.barrio_localidad} ({profe.provincia})</span>
                     </>
                   ) : (
                     profe?.direccion || "Sin dirección"
@@ -207,19 +206,19 @@ export default function DetalleProfe() {
               </div>
             </div>
 
-            <div className="mt-6 bg-slate-900 p-6 rounded-3xl text-white">
-              <h3 className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest mb-4 flex items-center justify-center gap-2">
+            <div className="mt-6 bg-primary p-6 rounded-3xl text-primary-foreground">
+              <h3 className="text-[10px] font-black text-primary-foreground/80 uppercase tracking-widest mb-4 flex items-center justify-center gap-2">
                 <Wallet className="h-3 w-3" /> Liquidación {format(hoy, "MMMM", { locale: es })}
               </h3>
               <div className="flex justify-around items-center">
                 <div className="text-center">
                   <p className="text-4xl font-black">{totalMesActual}</p>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold mt-1">Mes Actual</p>
+                  <p className="text-[9px] text-primary-foreground/70 uppercase font-bold mt-1">Mes Actual</p>
                 </div>
-                <div className="w-px h-10 bg-white/10"></div>
+                <div className="w-px h-10 bg-primary-foreground/20"></div>
                 <div className="text-center">
-                  <p className="text-4xl font-black text-emerald-400">{totalSemanaActual}</p>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold mt-1">Esta Semana</p>
+                  <p className="text-4xl font-black">{totalSemanaActual}</p>
+                  <p className="text-[9px] text-primary-foreground/70 uppercase font-bold mt-1">Esta Semana</p>
                 </div>
               </div>
             </div>
@@ -227,21 +226,21 @@ export default function DetalleProfe() {
         </div>
 
         <div className="lg:col-span-2 space-y-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-6 rounded-[2.5rem] border border-border shadow-sm">
             <div>
-              <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Grilla de la Profe</h3>
-              <p className="text-sm text-slate-500 font-medium">Gestión de cronograma y asistencias</p>
+              <h3 className="text-2xl font-black text-foreground uppercase tracking-tighter italic">Grilla de la Profe</h3>
+              <p className="text-sm text-muted-foreground font-medium">Gestión de cronograma y asistencias</p>
             </div>
             <Button 
               onClick={() => setModalAbierto(true)} 
-              className="bg-fuchsia-600 hover:bg-slate-900 text-white rounded-2xl h-12 px-6 font-black uppercase tracking-widest transition-all shadow-lg shadow-fuchsia-900/20 w-full sm:w-auto"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-12 px-6 font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20 w-full sm:w-auto"
             >
               <Plus className="h-5 w-5 mr-2" /> Asignar Clase
             </Button>
           </div>
 
           {clasesAsignadas.length === 0 ? (
-            <div className="p-16 border-2 border-dashed border-slate-200 rounded-[3rem] text-center text-slate-400 bg-white">
+            <div className="p-16 border-2 border-dashed border-border rounded-[3rem] text-center text-muted-foreground bg-card">
               <CalendarDays className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="font-bold uppercase tracking-widest text-xs">Sin clases registradas</p>
             </div>
@@ -250,7 +249,7 @@ export default function DetalleProfe() {
               
               {clasesHoy.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black text-fuchsia-500 uppercase tracking-widest px-4 border-b border-fuchsia-100 pb-2 flex items-center gap-2">
+                  <h4 className="text-xs font-black text-primary uppercase tracking-widest px-4 border-b border-border pb-2 flex items-center gap-2">
                     <CalendarDays className="h-4 w-4" /> Clases de Hoy
                   </h4>
                   <div className="grid grid-cols-1 gap-4">
@@ -261,7 +260,7 @@ export default function DetalleProfe() {
 
               {clasesProximas.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black text-blue-500 uppercase tracking-widest px-4 border-b border-blue-100 pb-2 flex items-center gap-2">
+                  <h4 className="text-xs font-black text-foreground uppercase tracking-widest px-4 border-b border-border pb-2 flex items-center gap-2">
                     <Clock className="h-4 w-4" /> Próximas Clases
                   </h4>
                   <div className="grid grid-cols-1 gap-4">
@@ -272,7 +271,7 @@ export default function DetalleProfe() {
 
               {clasesHistorial.length > 0 && (
                 <div className="space-y-4 opacity-80 hover:opacity-100 transition-opacity">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest px-4 border-b border-slate-200 pb-2 flex items-center gap-2">
+                  <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest px-4 border-b border-border pb-2 flex items-center gap-2">
                     <CalendarDays className="h-4 w-4" /> Historial
                   </h4>
                   <div className="grid grid-cols-1 gap-4">
@@ -294,28 +293,28 @@ export default function DetalleProfe() {
       />
 
       {claseAAusentar && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-6 text-center space-y-5">
-            <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-2 shadow-inner">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card rounded-[2rem] shadow-2xl max-w-sm w-full p-6 text-center space-y-5 border border-border">
+            <div className="mx-auto w-16 h-16 bg-muted text-muted-foreground rounded-full flex items-center justify-center mb-2 shadow-inner">
               <AlertCircle className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-black text-2xl text-slate-900 tracking-tighter">¿Marcar Ausencia?</h3>
-              <p className="text-slate-500 text-sm mt-2 font-medium leading-relaxed">
-                Vas a reportar que la profe faltará a la clase de <strong className="text-slate-900 uppercase">{claseAAusentar.nivel}</strong> del {format(parseISO(claseAAusentar.fecha), "dd/MM")}.
+              <h3 className="font-black text-2xl text-foreground tracking-tighter">¿Marcar Ausencia?</h3>
+              <p className="text-muted-foreground text-sm mt-2 font-medium leading-relaxed">
+                Vas a reportar que la profe faltará a la clase de <strong className="text-foreground uppercase">{claseAAusentar.nivel}</strong> del {format(parseISO(claseAAusentar.fecha), "dd/MM")}.
               </p>
             </div>
-            <div className="bg-amber-50 border border-amber-100 text-amber-800 p-3 rounded-2xl text-xs font-medium text-left">
-              <AlertTriangle className="h-4 w-4 inline-block mr-1.5 mb-0.5 text-amber-600" />
+            <div className="bg-muted border border-border text-foreground p-3 rounded-2xl text-xs font-medium text-left">
+              <AlertTriangle className="h-4 w-4 inline-block mr-1.5 mb-0.5 text-muted-foreground" />
               La clase quedará sin profesora y <strong>libre para suplencias</strong>, pero la ausencia quedará en el historial.
             </div>
             
             <div className="flex flex-col gap-3 pt-2">
-              <Button onClick={confirmarAusencia} disabled={marcandoAusencia} className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 h-12">
+              <Button onClick={confirmarAusencia} disabled={marcandoAusencia} className="w-full rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg h-12">
                 {marcandoAusencia ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                 {marcandoAusencia ? "Guardando..." : "Sí, marcar ausente"}
               </Button>
-              <Button onClick={() => setClaseAAusentar(null)} disabled={marcandoAusencia} variant="outline" className="w-full rounded-xl font-bold border-slate-200 text-slate-600 hover:bg-slate-100 h-12">
+              <Button onClick={() => setClaseAAusentar(null)} disabled={marcandoAusencia} variant="outline" className="w-full rounded-xl font-bold border-border text-foreground hover:bg-accent h-12">
                 Cancelar
               </Button>
             </div>

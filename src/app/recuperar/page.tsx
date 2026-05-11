@@ -21,7 +21,6 @@ export default function RecuperarClavePage() {
     e.preventDefault()
     setCargando(true)
 
-    // Le pedimos a Supabase que mande el mail y lo devuelva a nuestra otra pantalla
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/actualizar-clave`,
     })
@@ -36,13 +35,13 @@ export default function RecuperarClavePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-lg border-border">
         <CardHeader className="space-y-2 text-center pb-6">
-          <CardTitle className="text-3xl font-bold tracking-tight text-slate-900">
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">
             Recuperar contraseña
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-base text-muted-foreground">
             Ingresá tu email y te enviaremos un enlace para crear una nueva clave.
           </CardDescription>
         </CardHeader>
@@ -50,10 +49,10 @@ export default function RecuperarClavePage() {
         <CardContent>
           {enviado ? (
             <div className="text-center space-y-4">
-              <div className="p-4 bg-green-50 text-green-700 rounded-md border border-green-200">
+              <div className="p-4 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 text-sm font-medium">
                 Revisá tu bandeja de entrada (y la carpeta de Spam por las dudas). Te enviamos un link seguro para cambiar tu clave.
               </div>
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild variant="outline" className="w-full border-border text-foreground hover:bg-accent">
                 <Link href="/login">Volver al inicio de sesión</Link>
               </Button>
             </div>
@@ -65,14 +64,14 @@ export default function RecuperarClavePage() {
                   id="email"
                   type="email"
                   required
-                  className="bg-slate-50"
+                  className="bg-background border-input focus-visible:ring-ring"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                 />
               </div>
 
-              <Button type="submit" className="w-full mt-2" disabled={cargando}>
+              <Button type="submit" className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90" disabled={cargando}>
                 {cargando ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
                 ) : (
@@ -81,7 +80,7 @@ export default function RecuperarClavePage() {
               </Button>
 
               <div className="mt-4 text-center">
-                <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-2">
+                <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-2">
                   <ArrowLeft className="h-4 w-4" /> Volver atrás
                 </Link>
               </div>

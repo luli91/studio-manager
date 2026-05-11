@@ -60,7 +60,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
         .from("reservas")
         .select("id, estado, fecha_clase, clases(nivel, horario)")
         .eq("perfil_id", alumna.id)
-        .eq("estado", "confirmada") // MAGIA: Solo trae las reservas que SÍ están confirmadas
+        .eq("estado", "confirmada")
         .order("fecha_clase", { ascending: false })
 
       if (data) setHistorial(data)
@@ -156,32 +156,32 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+      <div className="bg-card rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-border">
         
-        <div className="bg-slate-900 p-5 flex justify-between items-start text-white shrink-0">
+        <div className="bg-primary p-5 flex justify-between items-start text-primary-foreground shrink-0">
           <div>
             <h3 className="font-bold text-2xl">{formData.nombre} {formData.apellido}</h3>
-            <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-medium mt-2 inline-block">Alumna</span>
+            <span className="bg-background/20 px-3 py-1 rounded-full text-xs font-medium mt-2 inline-block">Alumna</span>
           </div>
-          <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-md"><X className="h-6 w-6" /></button>
+          <button onClick={onClose} className="hover:bg-background/20 p-2 rounded-md transition-colors"><X className="h-6 w-6" /></button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-8 flex-1 bg-slate-50">
+        <div className="p-6 overflow-y-auto space-y-8 flex-1 bg-muted/30">
           
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
               <div className="text-center">
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Clases Disponibles</p>
-                <div className="text-5xl font-black text-fuchsia-600 transition-all duration-300">{creditos}</div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">Clases Disponibles</p>
+                <div className="text-5xl font-black text-primary transition-all duration-300">{creditos}</div>
               </div>
             </div>
             
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 w-full md:w-auto space-y-3">
-              <Label className="text-xs font-bold text-slate-500 uppercase">Ajustar saldo manualmente</Label>
+            <div className="bg-muted/50 p-4 rounded-xl border border-border w-full md:w-auto space-y-3">
+              <Label className="text-xs font-bold text-muted-foreground uppercase">Ajustar saldo manualmente</Label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <select 
-                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 min-w-[180px]"
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground focus-visible:ring-ring outline-none min-w-[180px]"
                   value={packSeleccionado}
                   onChange={(e) => setPackSeleccionado(Number(e.target.value))}
                   disabled={procesandoAjuste}
@@ -194,8 +194,8 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                 </select>
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" disabled={procesandoAjuste} onClick={() => handleAjustarClases('restar')} className="flex-1 text-red-600 hover:bg-red-50 border-red-200 shadow-sm"><Minus className="h-4 w-4 mr-2" /> Restar</Button>
-                  <Button variant="outline" disabled={procesandoAjuste} onClick={() => handleAjustarClases('sumar')} className="flex-1 text-emerald-600 hover:bg-emerald-50 border-emerald-200 shadow-sm"><Plus className="h-4 w-4 mr-2" /> Sumar</Button>
+                  <Button variant="outline" disabled={procesandoAjuste} onClick={() => handleAjustarClases('restar')} className="flex-1 text-destructive hover:bg-destructive/10 border-destructive/20 shadow-sm"><Minus className="h-4 w-4 mr-2" /> Restar</Button>
+                  <Button variant="outline" disabled={procesandoAjuste} onClick={() => handleAjustarClases('sumar')} className="flex-1 text-primary hover:bg-primary/10 border-primary/20 shadow-sm"><Plus className="h-4 w-4 mr-2" /> Sumar</Button>
                 </div>
               </div>
             </div>
@@ -205,54 +205,54 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
             
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-bold text-slate-900 text-lg">Ficha Personal</h4>
+                <h4 className="font-bold text-foreground text-lg">Ficha Personal</h4>
                 {!editando && (
-                  <Button variant="ghost" size="sm" onClick={() => setEditando(true)} className="text-fuchsia-600 hover:bg-fuchsia-50">
+                  <Button variant="ghost" size="sm" onClick={() => setEditando(true)} className="text-primary hover:bg-primary/10">
                     <Edit2 className="h-4 w-4 mr-2" /> Editar
                   </Button>
                 )}
               </div>
 
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <div className="bg-card p-5 rounded-xl border border-border shadow-sm space-y-4">
                 {editando ? (
                   <div className="space-y-3 animate-in fade-in">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-xs font-bold text-slate-500">Nombre</Label>
-                        <Input value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+                        <Label className="text-xs font-bold text-muted-foreground">Nombre</Label>
+                        <Input value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-bold text-slate-500">Apellido</Label>
-                        <Input value={formData.apellido} onChange={e => setFormData({...formData, apellido: e.target.value})} />
+                        <Label className="text-xs font-bold text-muted-foreground">Apellido</Label>
+                        <Input value={formData.apellido} onChange={e => setFormData({...formData, apellido: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
                       </div>
                     </div>
                     
                     <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 flex items-center gap-1"><Lock className="h-3 w-3"/> Email (No editable)</Label>
-                      <Input value={alumna.email} disabled className="bg-slate-50 text-slate-500" />
+                      <Label className="text-xs font-bold text-muted-foreground flex items-center gap-1"><Lock className="h-3 w-3"/> Email (No editable)</Label>
+                      <Input value={alumna.email} disabled className="bg-muted text-muted-foreground" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500">WhatsApp</Label>
-                      <Input value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value})} />
+                      <Label className="text-xs font-bold text-muted-foreground">WhatsApp</Label>
+                      <Input value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500">Urgencia</Label>
-                      <Input value={formData.contacto_urgencia} onChange={e => setFormData({...formData, contacto_urgencia: e.target.value})} />
+                      <Label className="text-xs font-bold text-muted-foreground">Urgencia</Label>
+                      <Input value={formData.contacto_urgencia} onChange={e => setFormData({...formData, contacto_urgencia: e.target.value})} className="bg-background border-input focus-visible:ring-ring" />
                     </div>
                     
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
-                      <Label className="text-xs font-bold text-slate-500 uppercase">Dirección</Label>
+                    <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-3">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Dirección</Label>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="col-span-2">
-                          <Input value={formData.calle} onChange={e => setFormData({...formData, calle: e.target.value})} placeholder="Calle" />
+                          <Input value={formData.calle} onChange={e => setFormData({...formData, calle: e.target.value})} placeholder="Calle" className="bg-background border-input focus-visible:ring-ring" />
                         </div>
                         <div>
-                          <Input value={formData.numero_calle} onChange={e => setFormData({...formData, numero_calle: e.target.value})} placeholder="N°" />
+                          <Input value={formData.numero_calle} onChange={e => setFormData({...formData, numero_calle: e.target.value})} placeholder="N°" className="bg-background border-input focus-visible:ring-ring" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <select 
-                          className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           value={formData.provincia} 
                           onChange={e => setFormData({...formData, provincia: e.target.value, barrio_localidad: ""})}
                         >
@@ -265,7 +265,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                         </select>
                         {ZONAS[formData.provincia] ? (
                           <select
-                            className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             value={formData.barrio_localidad}
                             onChange={e => setFormData({...formData, barrio_localidad: e.target.value})}
                           >
@@ -275,35 +275,35 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                             ))}
                           </select>
                         ) : (
-                          <Input value={formData.barrio_localidad} onChange={e => setFormData({...formData, barrio_localidad: e.target.value})} placeholder="Barrio" className="bg-white" disabled={formData.provincia === ""} />
+                          <Input value={formData.barrio_localidad} onChange={e => setFormData({...formData, barrio_localidad: e.target.value})} placeholder="Barrio" className="bg-background border-input focus-visible:ring-ring" disabled={formData.provincia === ""} />
                         )}
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2 border-t border-slate-100 mt-4 pt-4">
-                      <Button onClick={handleGuardarDatos} disabled={guardando} className="flex-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
+                    <div className="flex gap-2 pt-2 border-t border-border mt-4">
+                      <Button onClick={handleGuardarDatos} disabled={guardando} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
                         {guardando ? "Guardando..." : "Guardar"}
                       </Button>
-                      <Button variant="outline" onClick={() => setEditando(false)}>Cancelar</Button>
+                      <Button variant="outline" onClick={() => setEditando(false)} className="border-border text-foreground hover:bg-accent">Cancelar</Button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Email registrado</p>
-                      <p className="font-medium text-slate-900">{alumna.email}</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Email registrado</p>
+                      <p className="font-medium text-foreground">{alumna.email}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">WhatsApp</p>
-                      <p className="font-medium text-slate-900">{formData.telefono || "-"}</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase">WhatsApp</p>
+                      <p className="font-medium text-foreground">{formData.telefono || "-"}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Emergencia</p>
-                      <p className="font-medium text-slate-900">{formData.contacto_urgencia || "-"}</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Emergencia</p>
+                      <p className="font-medium text-foreground">{formData.contacto_urgencia || "-"}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Dirección</p>
-                      <p className="font-medium text-slate-900">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Dirección</p>
+                      <p className="font-medium text-foreground">
                         {formData.calle} {formData.numero_calle}, {formData.barrio_localidad} ({formData.provincia})
                       </p>
                     </div>
@@ -313,26 +313,26 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
             </div>
 
             <div className="space-y-4">
-              <h4 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-slate-400" /> Historial de Reservas
+              <h4 className="font-bold text-foreground text-lg flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-muted-foreground" /> Historial de Reservas
               </h4>
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[360px] flex flex-col">
+              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden h-[360px] flex flex-col">
                 {cargandoHistorial ? (
-                  <div className="flex-1 flex justify-center items-center"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+                  <div className="flex-1 flex justify-center items-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                 ) : historial.length === 0 ? (
-                  <div className="flex-1 flex flex-col justify-center items-center text-slate-400 text-sm p-6 text-center gap-2">
-                    <CalendarDays className="h-8 w-8 text-slate-200" />
+                  <div className="flex-1 flex flex-col justify-center items-center text-muted-foreground text-sm p-6 text-center gap-2">
+                    <CalendarDays className="h-8 w-8 text-muted" />
                     Sin reservas activas.
                   </div>
                 ) : (
-                  <div className="overflow-y-auto divide-y divide-slate-100 flex-1">
+                  <div className="overflow-y-auto divide-y divide-border flex-1">
                     {historial.map((reserva) => (
-                      <div key={reserva.id} className="p-4 hover:bg-slate-50 transition-colors flex justify-between items-center">
+                      <div key={reserva.id} className="p-4 hover:bg-muted/50 transition-colors flex justify-between items-center">
                         <div>
-                          <p className="font-bold text-slate-900">{reserva.clases?.nivel}</p>
-                          <p className="text-xs text-slate-500">{formatearFecha(reserva.fecha_clase)} a las {reserva.clases?.horario.slice(0,5)}hs</p>
+                          <p className="font-bold text-foreground">{reserva.clases?.nivel}</p>
+                          <p className="text-xs text-muted-foreground">{formatearFecha(reserva.fecha_clase)} a las {reserva.clases?.horario.slice(0,5)}hs</p>
                         </div>
-                        <span className="bg-fuchsia-100 text-fuchsia-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Anotada</span>
+                        <span className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border border-border">Anotada</span>
                       </div>
                     ))}
                   </div>
@@ -342,13 +342,13 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
 
           </div>
 
-          <div className="pt-6 mt-4 border-t border-red-100">
-            <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-3 text-red-800">
+          <div className="pt-6 mt-4 border-t border-destructive/20">
+            <div className="bg-destructive/10 p-4 rounded-xl border border-destructive/20 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-3 text-destructive">
                 <AlertTriangle className="h-6 w-6 shrink-0" />
                 <p className="text-sm">Si borrás a esta alumna, perderá el acceso a la cuenta y se cancelarán todas sus reservas activas.</p>
               </div>
-              <Button variant="destructive" onClick={handleEliminarAlumna} className="shrink-0 bg-red-600 hover:bg-red-700">
+              <Button variant="destructive" onClick={handleEliminarAlumna} className="shrink-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                 <Trash2 className="h-4 w-4 mr-2" /> Eliminar Alumna
               </Button>
             </div>

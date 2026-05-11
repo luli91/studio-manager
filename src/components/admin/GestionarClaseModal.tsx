@@ -54,13 +54,11 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
   const [pasoEliminacion, setPasoEliminacion] = useState<1 | 2>(1)
   const [eliminando, setEliminando] = useState(false)
   
-  // MODAL DE CONFIRMACIÓN DE WPP
   const [confirmarCobro, setConfirmarCobro] = useState(false)
 
   const diaDeLaSemana = clase.fecha ? obtenerDiaSemana(clase.fecha) : "";
   const opcionesDelDia = CRONOGRAMA_OFICIAL[diaDeLaSemana] || [];
   
-  // MAGIA: Determinamos en tiempo real si el evento es pago
   const esEventoPago = datosClase.es_evento && formaDePago === "pesos" && datosClase.precio > 0;
 
   const cargarDatos = async () => {
@@ -115,7 +113,6 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
     }
   }
 
-  // FUNCIÓN MAESTRA QUE ANOTA, COBRA Y MANDA WPP
   const procesarAnotacion = async (enviarWpp: boolean = false) => {
     if (!alumnaSeleccionada) return toast.error("Seleccioná una alumna")
     
@@ -126,7 +123,6 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
 
     setAgregando(true)
     try {
-      // 1. ANOTAMOS A LA ALUMNA (UPSERT por si estaba cancelada antes)
       const { error: errorReserva } = await supabase.from("reservas").upsert({ 
         perfil_id: alumnaSeleccionada, 
         clase_id: clase.id, 
@@ -137,7 +133,6 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
       if (errorReserva) throw errorReserva
 
       if (esEventoPago) {
-        // 2. INSERTA PAGO EN FINANZAS CON PARÁMETROS SEGUROS
         const { error: errPago } = await supabase.from("pagos").insert([{
           perfil_id: alumnaSeleccionada,
           monto: datosClase.precio,
@@ -153,7 +148,6 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
           toast.success("¡Cobro sumado a Finanzas y alumna anotada!");
         }
 
-        // 3. ENVÍO OPCIONAL DE WHATSAPP
         if (enviarWpp && alumna?.telefono) {
           const numLimpio = alumna.telefono.replace(/\D/g, '')
           const [anio, mes, dia] = clase.fecha.split('-')
@@ -188,7 +182,6 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
       await supabase.from("reservas").update({ estado: 'cancelada' }).eq("id", reservaAEliminar.id)
       
       if (esEventoPago) {
-        // MAGIA FINANZAS: Si cancela un evento pago, insertamos un pago negativo para restar de la caja
         const { error: errDev } = await supabase.from("pagos").insert([{
           perfil_id: reservaAEliminar.perfiles.id,
           monto: -datosClase.precio,
@@ -225,28 +218,27 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
 
   return (
     <>
-      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-in fade-in">
-        <div className="bg-white rounded-3xl shadow-xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="bg-card rounded-3xl shadow-xl border border-border max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col">
           
-          <div className="bg-slate-900 p-6 flex justify-between items-center text-white shrink-0">
+          <div className="bg-primary p-6 flex justify-between items-center text-primary-foreground shrink-0">
             <h3 className="font-black text-2xl uppercase tracking-tighter italic">Gestionar Clase</h3>
-            <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-full transition-colors"><X className="h-6 w-6" /></button>
+            <button onClick={onClose} className="hover:bg-background/20 p-2 rounded-full transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
           <div className="p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {cargando ? <div className="col-span-2 flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-fuchsia-600" /></div> : (
+            {cargando ? <div className="col-span-2 flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div> : (
               <>
-                {/* COLUMNA IZQUIERDA: CONFIGURACIÓN DE LA CLASE */}
                 <div className="space-y-6">
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings2 className="h-4 w-4"/> Configuración de la clase</h4>
+                  <div className="bg-muted/30 p-5 rounded-2xl border border-border space-y-4">
+                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Settings2 className="h-4 w-4"/> Configuración de la clase</h4>
                     
                     <div className="grid grid-cols-2 gap-3">
                       {!datosClase.es_evento ? (
                         <div className="space-y-1 col-span-2">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1 flex items-center gap-1"><ListFilter className="h-3 w-3 text-fuchsia-600"/> Clase Oficial ({diaDeLaSemana})</Label>
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1 flex items-center gap-1"><ListFilter className="h-3 w-3 text-primary"/> Clase Oficial ({diaDeLaSemana})</Label>
                           <select 
-                            className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-all"
                             value={datosClase.nivel && datosClase.horario ? `${datosClase.nivel}|${datosClase.horario}` : ""}
                             onChange={e => {
                               const [n, h] = e.target.value.split('|');
@@ -260,37 +252,37 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                               </option>
                             ))}
                           </select>
-                          {opcionesDelDia.length === 0 && <p className="text-[10px] text-red-500 mt-1 ml-1 font-bold">No hay clases oficiales este día.</p>}
+                          {opcionesDelDia.length === 0 && <p className="text-[10px] text-destructive mt-1 ml-1 font-bold">No hay clases oficiales este día.</p>}
                         </div>
                       ) : (
                         <>
                           <div className="space-y-1 col-span-1">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Nombre Evento</Label>
-                            <Input value={datosClase.nivel} onChange={e => setDatosClase({...datosClase, nivel: e.target.value})} className="bg-white h-10" placeholder="Workshop..." />
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Nombre Evento</Label>
+                            <Input value={datosClase.nivel} onChange={e => setDatosClase({...datosClase, nivel: e.target.value})} className="bg-background h-10 border-input focus-visible:ring-ring" placeholder="Workshop..." />
                           </div>
                           <div className="space-y-1 col-span-1">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Horario</Label>
-                            <Input type="time" value={datosClase.horario} onChange={e => setDatosClase({...datosClase, horario: e.target.value})} className="bg-white h-10" />
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Horario</Label>
+                            <Input type="time" value={datosClase.horario} onChange={e => setDatosClase({...datosClase, horario: e.target.value})} className="bg-background h-10 border-input focus-visible:ring-ring" />
                           </div>
                         </>
                       )}
 
                       <div className="space-y-1 col-span-1">
-                        <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Cupo Máx.</Label>
-                        <Input type="number" min="1" value={datosClase.cupo_maximo} onChange={e => setDatosClase({...datosClase, cupo_maximo: parseInt(e.target.value) || 1})} className="bg-white h-10" />
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Cupo Máx.</Label>
+                        <Input type="number" min="1" value={datosClase.cupo_maximo} onChange={e => setDatosClase({...datosClase, cupo_maximo: parseInt(e.target.value) || 1})} className="bg-background h-10 border-input focus-visible:ring-ring" />
                       </div>
                       <div className="space-y-1 col-span-1">
-                        <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Profesora</Label>
-                        <select className="w-full h-10 px-3 rounded-md border border-slate-200 text-sm bg-white outline-none" value={datosClase.profesor_id} onChange={e => setDatosClase({...datosClase, profesor_id: e.target.value})}>
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Profesora</Label>
+                        <select className="w-full h-10 px-3 rounded-md border border-input text-sm bg-background outline-none focus:border-ring focus:ring-1 focus:ring-ring" value={datosClase.profesor_id} onChange={e => setDatosClase({...datosClase, profesor_id: e.target.value})}>
                           <option value="">Sin profesora</option>
                           {profesoras.map(p => <option key={p.id} value={p.id}>{p.nombre_completo}</option>)}
                         </select>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200">
+                    <div className="pt-2 border-t border-border">
                       <div className="flex items-center justify-between mb-3">
-                        <Label className="font-bold text-sm text-amber-700 flex items-center gap-1"><Sparkles className="h-4 w-4"/> ¿Es un evento especial?</Label>
+                        <Label className="font-bold text-sm text-foreground flex items-center gap-1"><Sparkles className="h-4 w-4"/> ¿Es un evento especial?</Label>
                         <Switch 
                           checked={datosClase.es_evento} 
                           onCheckedChange={c => setDatosClase({...datosClase, es_evento: c, nivel: c ? "" : "", horario: c ? "" : ""})} 
@@ -298,26 +290,26 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                       </div>
                       
                       {datosClase.es_evento && (
-                        <div className="space-y-3 animate-in fade-in bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                        <div className="space-y-3 animate-in fade-in bg-secondary/30 p-4 rounded-xl border border-border">
                           <div className="space-y-1">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Descripción (opcional)</Label>
-                            <Input placeholder="Requisitos, elementos..." value={datosClase.descripcion} onChange={e => setDatosClase({...datosClase, descripcion: e.target.value})} className="bg-white h-10 text-sm" />
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Descripción (opcional)</Label>
+                            <Input placeholder="Requisitos, elementos..." value={datosClase.descripcion} onChange={e => setDatosClase({...datosClase, descripcion: e.target.value})} className="bg-background h-10 text-sm border-input focus-visible:ring-ring" />
                           </div>
                           
                           <div className="pt-2">
-                            <Label className="text-xs font-bold text-slate-900 mb-2 block">Método de cobro del evento:</Label>
+                            <Label className="text-xs font-bold text-foreground mb-2 block">Método de cobro del evento:</Label>
                             <div className="grid grid-cols-2 gap-3">
-                              <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-2 text-xs font-bold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-amber-500 text-white border-amber-500 shadow-md" : "bg-white text-slate-500 border-slate-200"}`}>Gasta clase</button>
-                              <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-2 text-xs font-bold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-amber-500 text-white border-amber-500 shadow-md" : "bg-white text-slate-500 border-slate-200"}`}>Se paga aparte</button>
+                              <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-2 text-xs font-bold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Gasta clase</button>
+                              <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-2 text-xs font-bold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Se paga aparte</button>
                             </div>
                           </div>
 
                           {formaDePago === "pesos" && (
                             <div className="space-y-1 pt-2 animate-in fade-in">
-                              <Label className="flex items-center gap-1 text-[10px] font-bold uppercase"><DollarSign className="h-3 w-3 text-emerald-600"/> Precio de la entrada</Label>
+                              <Label className="flex items-center gap-1 text-[10px] font-bold uppercase"><DollarSign className="h-3 w-3 text-primary"/> Precio de la entrada</Label>
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                                <Input type="number" min="0" placeholder="Ej: 15000" className="pl-7 bg-white h-10 text-sm border-emerald-200 focus-visible:ring-emerald-500" value={datosClase.precio} onChange={e => setDatosClase({...datosClase, precio: parseInt(e.target.value) || 0})} />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                                <Input type="number" min="0" placeholder="Ej: 15000" className="pl-7 bg-background h-10 text-sm border-input focus-visible:ring-ring" value={datosClase.precio} onChange={e => setDatosClase({...datosClase, precio: parseInt(e.target.value) || 0})} />
                               </div>
                             </div>
                           )}
@@ -325,24 +317,23 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                       )}
                     </div>
 
-                    <Button onClick={handleGuardarCambiosClase} disabled={guardandoCambios} className="w-full bg-slate-900 hover:bg-emerald-600 text-white transition-colors h-12 rounded-xl font-bold">
+                    <Button onClick={handleGuardarCambiosClase} disabled={guardandoCambios} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground transition-colors h-12 rounded-xl font-bold">
                       {guardandoCambios ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />} Guardar cambios
                     </Button>
                   </div>
 
-                  {/* ANOTAR ALUMNA */}
-                  <div className={`p-5 rounded-2xl border space-y-4 ${esEventoPago ? 'bg-amber-50 border-amber-200 shadow-inner' : 'bg-fuchsia-50 border-fuchsia-100'}`}>
-                    <h4 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${esEventoPago ? 'text-amber-700' : 'text-fuchsia-600'}`}>
+                  <div className={`p-5 rounded-2xl border space-y-4 ${esEventoPago ? 'bg-secondary/50 border-primary shadow-inner' : 'bg-muted/20 border-border'}`}>
+                    <h4 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${esEventoPago ? 'text-primary' : 'text-foreground'}`}>
                       <UserPlus className="h-4 w-4"/> {esEventoPago ? "Anotar y Cobrar Evento" : "Anotar Alumna"}
                     </h4>
                     
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input placeholder="Buscar por nombre..." className="pl-9 bg-white h-10" value={busquedaAlumna} onChange={e => setBusquedaAlumna(e.target.value)} />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Buscar por nombre..." className="pl-9 bg-background h-10 border-input focus-visible:ring-ring" value={busquedaAlumna} onChange={e => setBusquedaAlumna(e.target.value)} />
                     </div>
                     
                     {busquedaAlumna && (
-                      <div className="max-h-36 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-inner">
+                      <div className="max-h-36 overflow-y-auto bg-background border border-border rounded-lg shadow-inner">
                         {alumnasFiltradas.length > 0 ? (
                           alumnasFiltradas.map(a => (
                             <div 
@@ -351,27 +342,27 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                                 setAlumnaSeleccionada(a.id); 
                                 setBusquedaAlumna(""); 
                               }} 
-                              className="p-3 text-sm cursor-pointer hover:bg-fuchsia-50 border-b border-slate-50 last:border-0 flex justify-between items-center"
+                              className="p-3 text-sm cursor-pointer hover:bg-accent border-b border-border last:border-0 flex justify-between items-center"
                             >
-                              <span className="font-medium text-slate-700">{a.nombre_completo}</span>
-                              <span className={`text-xs font-bold ${a.creditos_clases <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                              <span className="font-medium text-foreground">{a.nombre_completo}</span>
+                              <span className={`text-xs font-bold ${a.creditos_clases <= 0 ? 'text-destructive' : 'text-primary'}`}>
                                 ({a.creditos_clases} clases)
                               </span>
                             </div>
                           ))
                         ) : (
-                          <div className="p-3 text-sm text-slate-400 text-center">No se encontraron alumnas.</div>
+                          <div className="p-3 text-sm text-muted-foreground text-center">No se encontraron alumnas.</div>
                         )}
                       </div>
                     )}
 
                     {alumnaSeleccionada && (
-                      <div className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm animate-in fade-in">
-                        <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                           <CheckCircle className="h-4 w-4 text-emerald-500" />
+                      <div className="bg-background p-3 rounded-xl border border-border flex justify-between items-center shadow-sm animate-in fade-in">
+                        <span className="font-bold text-sm text-foreground flex items-center gap-2">
+                           <CheckCircle className="h-4 w-4 text-primary" />
                            {alumnas.find(a => a.id === alumnaSeleccionada)?.nombre_completo}
                         </span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-red-500" onClick={() => setAlumnaSeleccionada("")}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setAlumnaSeleccionada("")}>
                           <X className="h-4 w-4"/>
                         </Button>
                       </div>
@@ -379,44 +370,43 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
 
                     {esEventoPago ? (
                       <div className="pt-2">
-                        <Button onClick={() => setConfirmarCobro(true)} disabled={!alumnaSeleccionada} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold h-12 rounded-xl shadow-md">
+                        <Button onClick={() => setConfirmarCobro(true)} disabled={!alumnaSeleccionada} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-md">
                           Anotar Alumna
                         </Button>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2 pt-2">
                         <div className="flex items-center justify-between gap-4">
-                          <label className="text-xs font-bold flex items-center gap-2 cursor-pointer text-slate-700">
-                            <input type="checkbox" checked={descontarCredito} onChange={e => setDescontarCredito(e.target.checked)} className="rounded text-fuchsia-600 focus:ring-fuchsia-500 h-4 w-4" /> 
+                          <label className="text-xs font-bold flex items-center gap-2 cursor-pointer text-foreground">
+                            <input type="checkbox" checked={descontarCredito} onChange={e => setDescontarCredito(e.target.checked)} className="rounded text-primary focus:ring-primary h-4 w-4" /> 
                             Descontar clase del pack
                           </label>
-                          <Button onClick={() => procesarAnotacion(false)} disabled={agregando || !alumnaSeleccionada || sinSaldoParaGastar} className={`h-10 px-6 rounded-xl font-bold ${sinSaldoParaGastar ? 'bg-slate-300 text-slate-500' : 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white'}`}>
+                          <Button onClick={() => procesarAnotacion(false)} disabled={agregando || !alumnaSeleccionada || sinSaldoParaGastar} className={`h-10 px-6 rounded-xl font-bold ${sinSaldoParaGastar ? 'bg-muted text-muted-foreground' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}>
                             Anotar
                           </Button>
                         </div>
                         {sinSaldoParaGastar && (
-                          <p className="text-[10px] font-bold text-red-500 text-right animate-in fade-in">Esta alumna no tiene clases en su cuenta.</p>
+                          <p className="text-[10px] font-bold text-destructive text-right animate-in fade-in">Esta alumna no tiene clases en su cuenta.</p>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* COLUMNA DERECHA: LISTADO DE ASISTENCIA */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-end px-2">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users className="h-4 w-4"/> Lista de Asistencia</h4>
-                    <span className="text-xl font-black text-slate-900 italic">{reservas.length} / {datosClase.cupo_maximo}</span>
+                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Users className="h-4 w-4"/> Lista de Asistencia</h4>
+                    <span className="text-xl font-black text-foreground italic">{reservas.length} / {datosClase.cupo_maximo}</span>
                   </div>
-                  <div className="bg-white border border-slate-100 rounded-2xl divide-y overflow-hidden shadow-sm">
-                    {reservas.length === 0 ? <div className="p-10 text-center text-slate-400 text-sm italic">Nadie anotado todavía.</div> : 
+                  <div className="bg-card border border-border rounded-2xl divide-y overflow-hidden shadow-sm">
+                    {reservas.length === 0 ? <div className="p-10 text-center text-muted-foreground text-sm italic">Nadie anotado todavía.</div> : 
                       reservas.map(res => (
-                        <div key={res.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <div key={res.id} className="p-4 flex justify-between items-center hover:bg-accent transition-colors">
                           <div>
-                            <p className="font-bold text-slate-800 text-sm">{res.perfiles?.nombre ? `${res.perfiles.nombre} ${res.perfiles.apellido}` : res.perfiles?.nombre_completo}</p>
-                            <p className="text-[10px] text-slate-400 font-medium">{res.perfiles?.email}</p>
+                            <p className="font-bold text-foreground text-sm">{res.perfiles?.nombre ? `${res.perfiles.nombre} ${res.perfiles.apellido}` : res.perfiles?.nombre_completo}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium">{res.perfiles?.email}</p>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => iniciarEliminacion(res)} className="text-slate-300 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => iniciarEliminacion(res)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       ))
                     }
@@ -428,29 +418,28 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
         </div>
       </div>
 
-      {/* MODAL PARA CONFIRMAR EL COBRO DEL EVENTO PAGO */}
       {confirmarCobro && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center space-y-5 border-2 border-amber-100">
-            <div className="mx-auto w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-2 shadow-inner">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center space-y-5 border border-primary">
+            <div className="mx-auto w-16 h-16 bg-secondary text-primary rounded-full flex items-center justify-center mb-2 shadow-inner">
               <ReceiptText className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-black text-2xl text-slate-900 tracking-tighter">¿Confirmar Anotación?</h3>
-              <p className="text-slate-500 text-sm mt-2 font-medium leading-relaxed">
+              <h3 className="font-black text-2xl text-foreground tracking-tighter">¿Confirmar Anotación?</h3>
+              <p className="text-muted-foreground text-sm mt-2 font-medium leading-relaxed">
                 Al aceptar, se sumarán <strong>${datosClase.precio}</strong> a la caja de este mes.
               </p>
             </div>
             
             <div className="flex flex-col gap-3 pt-4">
-              <Button onClick={() => procesarAnotacion(true)} disabled={agregando} className="w-full rounded-xl font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 h-12">
+              <Button onClick={() => procesarAnotacion(true)} disabled={agregando} className="w-full rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg h-12">
                 {agregando ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                 Anotar y avisar por WhatsApp
               </Button>
-              <Button onClick={() => procesarAnotacion(false)} disabled={agregando} className="w-full rounded-xl font-bold bg-slate-900 hover:bg-slate-800 text-white h-12">
+              <Button onClick={() => procesarAnotacion(false)} disabled={agregando} variant="outline" className="w-full rounded-xl font-bold border-border text-foreground hover:bg-accent h-12">
                 Solo anotar (sin mensaje)
               </Button>
-              <Button onClick={() => setConfirmarCobro(false)} disabled={agregando} variant="ghost" className="w-full rounded-xl font-bold text-slate-500 hover:bg-slate-100 h-12">
+              <Button onClick={() => setConfirmarCobro(false)} disabled={agregando} variant="ghost" className="w-full rounded-xl font-bold text-muted-foreground hover:bg-accent h-12">
                 Cancelar
               </Button>
             </div>
@@ -458,35 +447,34 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
         </div>
       )}
 
-      {/* MODAL DE ELIMINACIÓN */}
       {reservaAEliminar && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-4">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-4 border border-border">
             {pasoEliminacion === 1 ? (
               <>
-                <h3 className="font-bold text-xl italic tracking-tighter uppercase">¿Quitar de la clase?</h3>
-                <p className="text-slate-500 text-sm">Vas a liberar el cupo de <strong>{reservaAEliminar.perfiles?.nombre_completo}</strong>.</p>
-                <Button onClick={() => setPasoEliminacion(2)} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold uppercase rounded-xl h-12">Continuar</Button>
-                <Button onClick={() => setReservaAEliminar(null)} variant="ghost" className="w-full text-slate-500">Cancelar</Button>
+                <h3 className="font-bold text-xl italic tracking-tighter uppercase text-foreground">¿Quitar de la clase?</h3>
+                <p className="text-muted-foreground text-sm">Vas a liberar el cupo de <strong>{reservaAEliminar.perfiles?.nombre_completo}</strong>.</p>
+                <Button onClick={() => setPasoEliminacion(2)} className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold uppercase rounded-xl h-12">Continuar</Button>
+                <Button onClick={() => setReservaAEliminar(null)} variant="ghost" className="w-full text-muted-foreground hover:text-foreground">Cancelar</Button>
               </>
             ) : (
               <>
                 {esEventoPago ? (
                   <>
-                    <h3 className="font-bold text-xl text-red-600 italic tracking-tighter uppercase">¿Eliminar del Evento?</h3>
-                    <p className="text-slate-500 text-sm">Al aceptar, se le dará de baja y el sistema <strong>restará ${datosClase.precio} de tu caja actual.</strong></p>
+                    <h3 className="font-bold text-xl text-destructive italic tracking-tighter uppercase">¿Eliminar del Evento?</h3>
+                    <p className="text-muted-foreground text-sm">Al aceptar, se le dará de baja y el sistema <strong>restará ${datosClase.precio} de tu caja actual.</strong></p>
                     <div className="space-y-2 mt-4">
-                      <Button onClick={() => confirmarEliminacion(false)} disabled={eliminando} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold uppercase rounded-xl h-12">Confirmar baja y devolución</Button>
-                      <Button onClick={() => setReservaAEliminar(null)} variant="outline" className="w-full border-slate-200 text-slate-600 font-bold uppercase rounded-xl h-12">Cancelar</Button>
+                      <Button onClick={() => confirmarEliminacion(false)} disabled={eliminando} className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold uppercase rounded-xl h-12">Confirmar baja y devolución</Button>
+                      <Button onClick={() => setReservaAEliminar(null)} variant="outline" className="w-full border-border text-foreground hover:bg-accent font-bold uppercase rounded-xl h-12">Cancelar</Button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <h3 className="font-bold text-xl italic tracking-tighter uppercase">¿Devolver clase?</h3>
-                    <p className="text-slate-500 text-sm">¿Querés que recupere el crédito en su cuenta?</p>
+                    <h3 className="font-bold text-xl italic tracking-tighter uppercase text-foreground">¿Devolver clase?</h3>
+                    <p className="text-muted-foreground text-sm">¿Querés que recupere el crédito en su cuenta?</p>
                     <div className="space-y-2">
-                      <Button onClick={() => confirmarEliminacion(true)} disabled={eliminando} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase rounded-xl h-12">Sí, devolver 1 clase</Button>
-                      <Button onClick={() => confirmarEliminacion(false)} disabled={eliminando} variant="outline" className="w-full border-slate-200 text-slate-600 font-bold uppercase rounded-xl h-12">No, solo dar de baja</Button>
+                      <Button onClick={() => confirmarEliminacion(true)} disabled={eliminando} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase rounded-xl h-12">Sí, devolver 1 clase</Button>
+                      <Button onClick={() => confirmarEliminacion(false)} disabled={eliminando} variant="outline" className="w-full border-border text-foreground font-bold hover:bg-accent uppercase rounded-xl h-12">No, solo dar de baja</Button>
                     </div>
                   </>
                 )}

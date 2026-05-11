@@ -118,18 +118,18 @@ export default function CompletarPerfilPage() {
 
   if (cargando) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-900" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-lg shadow-lg border-slate-200">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-lg shadow-lg border-border">
         <CardHeader className="space-y-2 text-center pb-6">
-          <CardTitle className="text-3xl font-bold tracking-tight text-slate-900">¡Ya casi estamos!</CardTitle>
-          <CardDescription>Completá los datos que le faltan a Google para armar tu ficha.</CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">¡Ya casi estamos!</CardTitle>
+          <CardDescription className="text-muted-foreground">Completá los datos que le faltan a Google para armar tu ficha.</CardDescription>
         </CardHeader>
         
         <CardContent>
@@ -138,35 +138,35 @@ export default function CompletarPerfilPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="nombre">Nombre</Label>
-                <Input id="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                <Input id="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} className="border-input focus-visible:ring-ring" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="apellido">Apellido</Label>
-                <Input id="apellido" required value={apellido} onChange={(e) => setApellido(e.target.value)} />
+                <Input id="apellido" required value={apellido} onChange={(e) => setApellido(e.target.value)} className="border-input focus-visible:ring-ring" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="telefono">Celular (WhatsApp)</Label>
-                <Input id="telefono" required value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                <Input id="telefono" required value={telefono} onChange={(e) => setTelefono(e.target.value)} className="border-input focus-visible:ring-ring" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="urgencia">Tel. Emergencia</Label>
-                <Input id="urgencia" required value={contactoUrgencia} onChange={(e) => setContactoUrgencia(e.target.value)} />
+                <Input id="urgencia" required value={contactoUrgencia} onChange={(e) => setContactoUrgencia(e.target.value)} className="border-input focus-visible:ring-ring" />
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg space-y-4">
-              <Label className="text-slate-600 font-bold uppercase text-xs">Dirección</Label>
+            <div className="p-4 bg-secondary/30 border border-border rounded-lg space-y-4">
+              <Label className="text-muted-foreground font-bold uppercase text-xs">Dirección</Label>
               <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2 col-span-2">
                   <Label className="text-xs">Calle</Label>
-                  <Input required value={calle} onChange={(e) => setCalle(e.target.value)} placeholder="Ej: Av. Cabildo" />
+                  <Input required value={calle} onChange={(e) => setCalle(e.target.value)} placeholder="Ej: Av. Cabildo" className="bg-background border-input focus-visible:ring-ring" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs">Número</Label>
-                  <Input required value={numeroCalle} onChange={(e) => setNumeroCalle(e.target.value)} placeholder="Ej: 1500" />
+                  <Input required value={numeroCalle} onChange={(e) => setNumeroCalle(e.target.value)} placeholder="Ej: 1500" className="bg-background border-input focus-visible:ring-ring" />
                 </div>
               </div>
 
@@ -175,7 +175,7 @@ export default function CompletarPerfilPage() {
                   <Label className="text-xs">Provincia / Región</Label>
                   <select 
                     required
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={provincia} 
                     onChange={e => {
                       setProvincia(e.target.value)
@@ -195,7 +195,7 @@ export default function CompletarPerfilPage() {
                   {ZONAS[provincia] ? (
                     <select
                       required
-                      className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       value={barrioLocalidad}
                       onChange={e => setBarrioLocalidad(e.target.value)}
                     >
@@ -211,6 +211,7 @@ export default function CompletarPerfilPage() {
                       onChange={(e) => setBarrioLocalidad(e.target.value)} 
                       placeholder={provincia === "" ? "Primero elegí provincia" : "Escribí tu localidad"} 
                       disabled={provincia === ""}
+                      className="bg-background border-input focus-visible:ring-ring"
                     />
                   )}
                 </div>
@@ -220,14 +221,14 @@ export default function CompletarPerfilPage() {
             <div className="grid gap-2 pt-2">
               <Label htmlFor="password">Crear contraseña de respaldo (obligatorio)</Label>
               <div className="relative">
-                <Input id="password" type={showPassword ? "text" : "password"} required minLength={6} className="pr-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                <Input id="password" type={showPassword ? "text" : "password"} required minLength={6} className="pr-10 border-input focus-visible:ring-ring" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full mt-2 bg-slate-900 hover:bg-slate-800" disabled={guardando}>
+            <Button type="submit" className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90" disabled={guardando}>
               {guardando ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : "Finalizar registro"}
             </Button>
           </form>

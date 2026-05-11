@@ -61,48 +61,48 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
   return (
     <div className="max-w-xl mx-auto space-y-8 animate-in fade-in pb-20">
       <header className="text-center">
-        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Mi Perfil</h1>
-        <p className="text-slate-500 font-medium">Actualizá tus datos personales.</p>
+        <h1 className="text-4xl font-black text-foreground uppercase tracking-tighter italic">Mi Perfil</h1>
+        <p className="text-muted-foreground font-medium">Actualizá tus datos personales.</p>
       </header>
-      <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-card p-8 rounded-[3rem] border border-border shadow-sm space-y-6">
         <div className="grid grid-cols-1 gap-5">
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">Nombre</label>
-              <Input value={datosEdit.nombre} onChange={e => setDatosEdit({...datosEdit, nombre: e.target.value})} className="rounded-2xl h-12" />
+              <label className="text-[10px] font-black text-muted-foreground uppercase ml-4 tracking-widest">Nombre</label>
+              <Input value={datosEdit.nombre} onChange={e => setDatosEdit({...datosEdit, nombre: e.target.value})} className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">Apellido</label>
-              <Input value={datosEdit.apellido} onChange={e => setDatosEdit({...datosEdit, apellido: e.target.value})} className="rounded-2xl h-12" />
+              <label className="text-[10px] font-black text-muted-foreground uppercase ml-4 tracking-widest">Apellido</label>
+              <Input value={datosEdit.apellido} onChange={e => setDatosEdit({...datosEdit, apellido: e.target.value})} className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">WhatsApp</label>
-            <Input value={datosEdit.telefono} onChange={e => setDatosEdit({...datosEdit, telefono: e.target.value})} className="rounded-2xl h-12" />
+            <label className="text-[10px] font-black text-muted-foreground uppercase ml-4 tracking-widest">WhatsApp</label>
+            <Input value={datosEdit.telefono} onChange={e => setDatosEdit({...datosEdit, telefono: e.target.value})} className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" />
           </div>
           
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">Contacto Emergencia</label>
-            <Input value={datosEdit.contacto_urgencia} onChange={e => setDatosEdit({...datosEdit, contacto_urgencia: e.target.value})} className="rounded-2xl h-12" />
+            <label className="text-[10px] font-black text-muted-foreground uppercase ml-4 tracking-widest">Contacto Emergencia</label>
+            <Input value={datosEdit.contacto_urgencia} onChange={e => setDatosEdit({...datosEdit, contacto_urgencia: e.target.value})} className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" />
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 space-y-4">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Dirección Completa</label>
+          <div className="bg-muted/30 p-4 rounded-3xl border border-border space-y-4">
+            <label className="text-[10px] font-black text-muted-foreground uppercase ml-2 tracking-widest">Dirección Completa</label>
             
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <Input value={datosEdit.calle} onChange={e => setDatosEdit({...datosEdit, calle: e.target.value})} placeholder="Calle" className="rounded-2xl h-12 bg-white" />
+                <Input value={datosEdit.calle} onChange={e => setDatosEdit({...datosEdit, calle: e.target.value})} placeholder="Calle" className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" />
               </div>
               <div>
-                <Input value={datosEdit.numero_calle} onChange={e => setDatosEdit({...datosEdit, numero_calle: e.target.value})} placeholder="N°" className="rounded-2xl h-12 bg-white" />
+                <Input value={datosEdit.numero_calle} onChange={e => setDatosEdit({...datosEdit, numero_calle: e.target.value})} placeholder="N°" className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <select 
-                className="flex h-12 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+                className="flex h-12 w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                 value={datosEdit.provincia} 
                 onChange={e => setDatosEdit({...datosEdit, provincia: e.target.value, barrio_localidad: ""})}
               >
@@ -115,7 +115,7 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
               </select>
               {ZONAS[datosEdit.provincia] ? (
                 <select
-                  className="flex h-12 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+                  className="flex h-12 w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                   value={datosEdit.barrio_localidad}
                   onChange={e => setDatosEdit({...datosEdit, barrio_localidad: e.target.value})}
                 >
@@ -125,14 +125,14 @@ export default function VistaPerfil({ perfil, alActualizar }: { perfil: any, alA
                   ))}
                 </select>
               ) : (
-                <Input value={datosEdit.barrio_localidad} onChange={e => setDatosEdit({...datosEdit, barrio_localidad: e.target.value})} placeholder="Barrio" className="rounded-2xl h-12 bg-white" disabled={datosEdit.provincia === ""} />
+                <Input value={datosEdit.barrio_localidad} onChange={e => setDatosEdit({...datosEdit, barrio_localidad: e.target.value})} placeholder="Barrio" className="rounded-2xl h-12 bg-background border-input focus-visible:ring-ring" disabled={datosEdit.provincia === ""} />
               )}
             </div>
           </div>
 
         </div>
         
-        <Button onClick={handleUpdatePerfil} className="w-full bg-slate-900 hover:bg-fuchsia-600 text-white h-14 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">
+        <Button onClick={handleUpdatePerfil} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-14 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">
           <Save className="mr-2 h-5 w-5" /> Guardar Cambios
         </Button>
       </div>

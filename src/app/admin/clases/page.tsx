@@ -33,7 +33,6 @@ export default function AdminClasesPage() {
       .order("horario", { ascending: true })
 
     if (data) {
-      // Filtramos las reservas para quedarnos SOLO con las confirmadas
       const clasesConReservasLimpias = data.map(clase => ({
         ...clase,
         reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []
@@ -66,7 +65,6 @@ export default function AdminClasesPage() {
       const clasesIds = clasesAfectadas.map(c => c.id)
 
       if (clasesIds.length > 0) {
-        // Al borrar una clase, DEVOLVEMOS el crédito solo a las confirmadas
         const { data: reservas, error: errRes } = await supabase
           .from("reservas")
           .select("id, perfil_id")
@@ -88,7 +86,6 @@ export default function AdminClasesPage() {
               .update({ creditos_clases: (perfil?.creditos_clases || 0) + 1 })
               .eq("id", res.perfil_id)
           }
-
           await supabase.from("reservas").delete().in("clase_id", clasesIds)
         }
 
@@ -96,7 +93,7 @@ export default function AdminClasesPage() {
         if (errBorrado) throw errBorrado
       }
 
-      toast.success(tipo === 'una' ? "Clase eliminada y clases devueltas" : "Serie eliminada y clases devueltas")
+      toast.success(tipo === 'una' ? "Clase eliminada" : "Serie eliminada")
       setClaseABorrar(null)
       cargarClases()
     } catch (error: any) {
@@ -146,11 +143,11 @@ export default function AdminClasesPage() {
     <div className="space-y-6">
       
       {!cargando && alertaGrilla && !mostrandoForm && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in">
-          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div className="bg-muted border border-border text-foreground p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in">
+          <AlertTriangle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
           <div>
             <h4 className="font-bold">¡Atención Flor! Tu grilla se está por terminar.</h4>
-            <p className="text-sm mt-1">
+            <p className="text-sm mt-1 text-muted-foreground">
               Las últimas clases programadas llegan hasta el <strong>{ultimaFecha}</strong>. 
               No te olvides de usar el botón "Nueva Clase" y repetir las semanas para generar los próximos meses.
             </p>
@@ -160,15 +157,15 @@ export default function AdminClasesPage() {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Calendar className="h-8 w-8 text-fuchsia-600" />
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+            <Calendar className="h-8 w-8 text-primary" />
             Gestión de Clases
           </h1>
-          <p className="text-slate-500 mt-1">Armá la grilla semanal y creá eventos especiales.</p>
+          <p className="text-muted-foreground mt-1">Armá la grilla semanal y creá eventos especiales.</p>
         </div>
         
         {!mostrandoForm && (
-          <Button onClick={() => setMostrandoForm(true)} className="bg-fuchsia-600 hover:bg-fuchsia-700">
+          <Button onClick={() => setMostrandoForm(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Plus className="mr-2 h-4 w-4" /> Nueva Clase
           </Button>
         )}
@@ -182,10 +179,10 @@ export default function AdminClasesPage() {
 
       {!mostrandoForm && !cargando && clases.length > 0 && (
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
-            placeholder="Buscar por nombre, día, horario o fecha..." 
-            className="pl-10 bg-white border-slate-200 shadow-sm"
+            placeholder="Buscar por nombre, día o fecha..." 
+            className="pl-10 bg-card border-border shadow-sm focus-visible:ring-ring"
             value={filtro}
             onChange={(e) => setFiltro(e.target.value)}
           />
@@ -193,59 +190,58 @@ export default function AdminClasesPage() {
       )}
 
       {!mostrandoForm && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {cargando ? (
             <div className="flex justify-center items-center p-12">
-              <Loader2 className="h-8 w-8 animate-spin text-fuchsia-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : clases.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 border-dashed border-2 border-slate-100 m-4 rounded-xl">
+            <div className="p-12 text-center text-muted-foreground border-dashed border-2 border-border m-4 rounded-xl">
               No hay clases programadas de hoy en adelante.
             </div>
           ) : clasesFiltradas.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
+            <div className="p-12 text-center text-muted-foreground">
               No se encontraron clases para "{filtro}".
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 max-h-[70vh] overflow-y-auto">
+            <div className="divide-y divide-border max-h-[70vh] overflow-y-auto">
               {clasesFiltradas.map((clase) => (
-                <div key={clase.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-slate-50 transition-colors">
+                <div key={clase.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-accent transition-colors">
                   
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg text-center min-w-[70px] ${clase.es_evento ? 'bg-amber-100 text-amber-700' : 'bg-fuchsia-100 text-fuchsia-700'}`}>
+                    <div className={`p-3 rounded-lg text-center min-w-[70px] ${clase.es_evento ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
                       <p className="text-xs font-bold uppercase">{clase.dia_semana.slice(0,3)}</p>
                       <p className="text-lg font-black">{clase.horario.slice(0,5)}</p>
                     </div>
                     
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                         {clase.nivel}
                         {clase.es_evento && (
-                          <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Evento</span>
+                          <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider">Evento</span>
                         )}
                         {clase.grupo_id && (
-                          <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-wider">Repetida</span>
+                          <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full uppercase tracking-wider">Repetida</span>
                         )}
                       </h3>
-                      <p className="text-sm text-slate-500 font-medium">
+                      <p className="text-sm text-muted-foreground font-medium">
                         {formatearFecha(clase.fecha)} • {clase.costo_creditos === 0 ? `Precio: $${clase.precio}` : `Gasta ${clase.costo_creditos} clase${clase.costo_creditos !== 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>
 
                   <div className="mt-4 sm:mt-0 flex items-center gap-6">
-                    <div className="text-right flex items-center gap-2 text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md">
+                    <div className="text-right flex items-center gap-2 text-secondary-foreground bg-secondary px-3 py-1.5 rounded-md">
                       <Users className="h-4 w-4" />
-                      {/* USAMOS EL CONTADOR DE RESERVAS CONFIRMADAS */}
                       <span className="text-sm font-bold">{clase.reservas_confirmadas?.length || 0} / {clase.cupo_maximo}</span>
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" title="Gestionar clase y alumnas" onClick={() => setClaseAGestionar(clase)} className="text-slate-400 hover:text-fuchsia-600 hover:bg-fuchsia-50">
+                      <Button variant="ghost" size="icon" title="Gestionar clase y alumnas" onClick={() => setClaseAGestionar(clase)} className="text-muted-foreground hover:text-foreground hover:bg-accent">
                         <Settings2 className="h-4 w-4" />
                       </Button>
                       
-                      <Button variant="ghost" size="icon" onClick={() => setClaseABorrar(clase)} className="text-slate-400 hover:text-red-600 hover:bg-red-50">
+                      <Button variant="ghost" size="icon" onClick={() => setClaseABorrar(clase)} className="text-muted-foreground hover:text-foreground hover:bg-accent">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -258,34 +254,34 @@ export default function AdminClasesPage() {
       )}
 
       {claseABorrar && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card rounded-2xl shadow-xl max-w-sm w-full overflow-hidden border border-border">
             <div className="p-6 text-center space-y-4">
-              <div className="mx-auto w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+              <div className="mx-auto w-12 h-12 bg-secondary text-secondary-foreground rounded-full flex items-center justify-center mb-4">
                 <Trash2 className="h-6 w-6" />
               </div>
-              <h3 className="font-bold text-xl text-slate-900">¿Borrar clase?</h3>
-              <p className="text-slate-500 text-sm">
+              <h3 className="font-bold text-xl text-foreground">¿Borrar clase?</h3>
+              <p className="text-muted-foreground text-sm">
                 Vas a borrar la clase de <strong>{claseABorrar.nivel}</strong> del {formatearFecha(claseABorrar.fecha)}.
               </p>
 
               {claseABorrar.reservas_confirmadas?.length > 0 && (
-                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs text-left mt-2">
-                  <AlertTriangle className="h-4 w-4 inline-block mr-1 mb-0.5 text-amber-600" />
-                  <strong>Tiene {claseABorrar.reservas_confirmadas.length} reserva(s) confirmada(s).</strong> El sistema cancelará las reservas y les devolverá 1 clase automáticamente a las alumnas.
+                <div className="bg-muted text-foreground p-3 rounded-lg text-xs text-left mt-2">
+                  <AlertTriangle className="h-4 w-4 inline-block mr-1 mb-0.5 text-muted-foreground" />
+                  <strong>Tiene {claseABorrar.reservas_confirmadas.length} reserva(s).</strong> El sistema las cancelará y devolverá las clases.
                 </div>
               )}
               
               <div className="space-y-3 pt-4">
                 {claseABorrar.grupo_id && (
-                  <Button onClick={() => confirmarBorrado('serie')} disabled={borrando} className="w-full bg-red-600 hover:bg-red-700 text-white">
+                  <Button onClick={() => confirmarBorrado('serie')} disabled={borrando} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                     Borrar esta y las siguientes (Serie)
                   </Button>
                 )}
-                <Button onClick={() => confirmarBorrado('una')} disabled={borrando} variant={claseABorrar.grupo_id ? "outline" : "destructive"} className="w-full">
+                <Button onClick={() => confirmarBorrado('una')} disabled={borrando} variant={claseABorrar.grupo_id ? "outline" : "default"} className={!claseABorrar.grupo_id ? "w-full bg-primary hover:bg-primary/90 text-primary-foreground" : "w-full border-border text-foreground hover:bg-accent"}>
                   Borrar solo esta clase
                 </Button>
-                <Button onClick={() => setClaseABorrar(null)} disabled={borrando} variant="ghost" className="w-full text-slate-500">
+                <Button onClick={() => setClaseABorrar(null)} disabled={borrando} variant="ghost" className="w-full text-muted-foreground hover:text-foreground">
                   Cancelar
                 </Button>
               </div>
@@ -293,6 +289,7 @@ export default function AdminClasesPage() {
           </div>
         </div>
       )}
+      
       {claseAGestionar && (
         <GestionarClaseModal 
             clase={claseAGestionar} 
@@ -300,7 +297,6 @@ export default function AdminClasesPage() {
             onUpdate={cargarClases} 
         />
         )}
-
     </div>
   )
 }

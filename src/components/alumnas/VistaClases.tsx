@@ -27,14 +27,14 @@ export default function VistaClases({
 
   return (
     <div className="space-y-8 animate-in fade-in">
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="border-b border-slate-100 pb-4">
-          <CardTitle className="text-xl text-slate-800">Mis próximas reservas</CardTitle>
-          <CardDescription>No te olvides de cancelar con 12hs de anticipación.</CardDescription>
+      <Card className="border-border shadow-sm bg-card">
+        <CardHeader className="border-b border-border pb-4">
+          <CardTitle className="text-xl text-foreground">Mis próximas reservas</CardTitle>
+          <CardDescription className="text-muted-foreground">No te olvides de cancelar con 12hs de anticipación.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {misReservas.length === 0 ? (
-            <div className="text-center p-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+            <div className="text-center p-8 text-muted-foreground border-2 border-dashed border-border rounded-xl bg-muted/30">
               Todavía no tenés reservas activas. ¡Anotate a una clase en la grilla de abajo!
             </div>
           ) : (
@@ -43,27 +43,33 @@ export default function VistaClases({
                 const esEvento = reserva.clases?.es_evento;
 
                 return (
-                  <div key={reserva.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl shadow-sm transition-colors gap-4 ${esEvento ? 'border-amber-200 bg-amber-50/30 hover:border-amber-300' : 'border-slate-200 bg-white hover:border-fuchsia-200'}`}>
+                  <div key={reserva.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl shadow-sm transition-colors gap-4 ${esEvento ? 'border-primary bg-secondary/30 hover:border-primary/80' : 'border-border bg-background hover:border-primary/50'}`}>
                     <div className="flex items-center gap-4">
-                      <div className={`${esEvento ? 'bg-amber-100 text-amber-700' : 'bg-fuchsia-50 text-fuchsia-700'} p-3 rounded-xl flex flex-col items-center justify-center min-w-[70px]`}>
-                        <p className="text-xs font-bold uppercase">{reserva.clases?.dia_semana.slice(0,3)}</p>
+                      
+                      {/* CAJITA DE LA FECHA */}
+                      <div className={`${esEvento ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'} p-3 rounded-xl flex flex-col items-center justify-center min-w-[70px] border border-border`}>
+                        <p className={`text-xs font-bold uppercase ${esEvento ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{reserva.clases?.dia_semana.slice(0,3)}</p>
                         <p className="text-lg font-black">{formatearFechaHermosa(reserva.fecha_clase)}</p>
                       </div>
+                      
                       <div>
-                        <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                        <h4 className="font-bold text-foreground flex items-center gap-2">
                           {reserva.clases?.nivel}
-                          {esEvento && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider ml-1 flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>}
+                          {/* ETIQUETA DE EVENTO */}
+                          {esEvento && <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider ml-1 flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>}
                         </h4>
-                        <p className={`text-sm flex items-center gap-1 mt-0.5 ${esEvento ? 'text-amber-700 font-medium' : 'text-slate-500'}`}>
+                        <p className="text-sm flex items-center gap-1 mt-0.5 text-muted-foreground font-medium">
                           <Clock className="h-3 w-3" /> {reserva.clases?.horario.slice(0,5)} hs
                         </p>
                       </div>
                     </div>
+                    
+                    {/* BOTÓN CANCELAR */}
                     <Button 
                       variant="outline" 
                       onClick={() => onCancelar(reserva)}
                       disabled={procesandoCancelacion === reserva.id}
-                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 w-full sm:w-auto transition-colors"
+                      className="text-muted-foreground border-border hover:bg-destructive hover:text-destructive-foreground hover:border-destructive w-full sm:w-auto transition-colors"
                     >
                       {procesandoCancelacion === reserva.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       Cancelar reserva
@@ -76,12 +82,12 @@ export default function VistaClases({
         </CardContent>
       </Card>
 
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-fuchsia-100 pb-4 bg-fuchsia-50">
-          <CardTitle className="text-xl text-fuchsia-900">Grilla de Horarios</CardTitle>
-          <CardDescription className="text-fuchsia-700">Elegí tu clase y asegurá tu lugar en el caño.</CardDescription>
+      <Card className="border-border shadow-sm overflow-hidden bg-card">
+        <CardHeader className="border-b border-border pb-4 bg-background">
+          <CardTitle className="text-xl text-foreground">Grilla de Horarios</CardTitle>
+          <CardDescription className="text-muted-foreground">Elegí tu clase y asegurá tu lugar.</CardDescription>
         </CardHeader>
-        <CardContent className="pt-6 bg-slate-50">
+        <CardContent className="pt-6 bg-muted/30">
           <GrillaReservas perfil={perfil} onReservaExitosa={onRecargar} />
         </CardContent>
       </Card>

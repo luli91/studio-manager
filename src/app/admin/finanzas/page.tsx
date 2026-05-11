@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -16,11 +15,9 @@ export default function FinanzasAdmin() {
 
   useEffect(() => {
     const cargarDatosFinancieros = async () => {
-      // Obtenemos el inicio del mes actual para las métricas
       const ahora = new Date()
       const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
 
-      // Traemos todos los pagos con el nombre de la alumna
       const { data, error } = await supabase
         .from("pagos")
         .select(`
@@ -32,13 +29,11 @@ export default function FinanzasAdmin() {
       if (data) {
         setPagos(data)
         
-        // Filtramos para las métricas del mes actual
         const pagosMes = data.filter(p => p.fecha >= inicioMes)
         const totalMes = pagosMes.reduce((sum, pago) => sum + Number(pago.monto), 0)
         
         setMetricas({
           total: totalMes,
-          // Solo sumamos los "Packs" en cantidad, para que no sume las entradas sueltas o devoluciones en este contador
           cantidad: pagosMes.filter(p => !p.concepto?.includes("Evento")).length
         })
       }
@@ -55,8 +50,8 @@ export default function FinanzasAdmin() {
 
   if (cargando) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-fuchsia-600" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -64,61 +59,58 @@ export default function FinanzasAdmin() {
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in">
       
-      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/admin">
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-200">
+            <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary text-foreground">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Finanzas</h1>
-            <p className="text-slate-500 text-sm">Seguimiento de ingresos y devoluciones del estudio.</p>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">Finanzas</h1>
+            <p className="text-muted-foreground text-sm">Seguimiento de ingresos y devoluciones del estudio.</p>
           </div>
         </div>
-        <Button variant="outline" className="gap-2 border-slate-300">
+        <Button variant="outline" className="gap-2 border-border text-foreground hover:bg-accent">
           <Download className="h-4 w-4" /> Exportar reporte
         </Button>
       </div>
 
-      {/* TARJETAS DE MÉTRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-emerald-600 text-white border-none shadow-md">
+        <Card className="bg-primary text-primary-foreground border-none shadow-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Caja del Mes</CardTitle>
-            <DollarSign className="h-5 w-5 opacity-80" />
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-primary-foreground/80">Caja del Mes</CardTitle>
+            <DollarSign className="h-5 w-5 text-primary-foreground/80" />
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-black">${metricas.total.toLocaleString('es-AR')}</div>
-            <p className="text-emerald-100 text-xs mt-4 flex items-center gap-1 font-medium">
+            <p className="text-primary-foreground/70 text-xs mt-4 flex items-center gap-1 font-medium">
               <TrendingUp className="h-3 w-3" /> Total acumulado (con devoluciones restadas)
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200 shadow-sm">
+        <Card className="bg-card border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">Packs Vendidos</CardTitle>
-            <Package className="h-5 w-5 text-fuchsia-600" />
+            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Packs Vendidos</CardTitle>
+            <Package className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-black text-slate-900">{metricas.cantidad}</div>
-            <p className="text-slate-500 text-xs mt-4 font-medium">Packs de clases asignados este mes</p>
+            <div className="text-4xl font-black text-foreground">{metricas.cantidad}</div>
+            <p className="text-muted-foreground text-xs mt-4 font-medium">Packs de clases asignados este mes</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* TABLA DE ÚLTIMOS MOVIMIENTOS */}
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <h3 className="font-bold text-slate-800">Historial detallado de ingresos</h3>
-          <span className="text-xs font-bold text-slate-400 uppercase">{pagos.length} registros totales</span>
+      <Card className="border-border shadow-sm overflow-hidden bg-card">
+        <div className="p-5 border-b border-border bg-muted/30 flex justify-between items-center">
+          <h3 className="font-bold text-foreground">Historial detallado de ingresos</h3>
+          <span className="text-xs font-bold text-muted-foreground uppercase">{pagos.length} registros totales</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 text-[10px] uppercase tracking-widest text-slate-400 font-black border-b border-slate-100">
+              <tr className="bg-muted/30 text-[10px] uppercase tracking-widest text-muted-foreground font-black border-b border-border">
                 <th className="px-6 py-4">Fecha</th>
                 <th className="px-6 py-4">Alumna</th>
                 <th className="px-6 py-4">Concepto</th>
@@ -126,31 +118,31 @@ export default function FinanzasAdmin() {
                 <th className="px-6 py-4 text-right">Monto</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {pagos.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No hay movimientos registrados.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground italic">No hay movimientos registrados.</td>
                 </tr>
               ) : (
                 pagos.map((pago) => {
                   const esDevolucion = Number(pago.monto) < 0;
 
                   return (
-                    <tr key={pago.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-6 py-4 text-sm text-slate-500 font-medium">{formatearFecha(pago.fecha)}</td>
+                    <tr key={pago.id} className="hover:bg-accent/50 transition-colors group">
+                      <td className="px-6 py-4 text-sm text-muted-foreground font-medium">{formatearFecha(pago.fecha)}</td>
                       <td className="px-6 py-4">
-                        <p className={`font-bold ${esDevolucion ? 'text-red-700' : 'text-slate-900'}`}>{pago.perfiles?.nombre_completo || "Alumna eliminada"}</p>
+                        <p className={`font-bold ${esDevolucion ? 'text-muted-foreground' : 'text-foreground'}`}>{pago.perfiles?.nombre_completo || "Alumna eliminada"}</p>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-600">
+                      <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
                         {pago.concepto ? pago.concepto : `Pack de ${pago.cantidad_clases} clases`}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md border ${esDevolucion ? 'bg-red-50 text-red-500 border-red-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md border ${esDevolucion ? 'bg-background text-muted-foreground border-border' : 'bg-secondary text-secondary-foreground border-border'}`}>
                           {pago.metodo_pago}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <p className={`font-black text-lg ${esDevolucion ? 'text-red-600' : 'text-emerald-600'}`}>
+                        <p className={`font-black text-lg ${esDevolucion ? 'text-muted-foreground' : 'text-foreground'}`}>
                           {esDevolucion ? '' : '+'} ${Number(pago.monto).toLocaleString('es-AR')}
                         </p>
                       </td>
