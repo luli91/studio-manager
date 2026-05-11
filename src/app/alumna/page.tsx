@@ -61,16 +61,15 @@ export default function DashboardAlumna() {
   }
 
   const handleCancelarReserva = async (reserva: any) => {
-    setProcesandoCancelacion(reserva.id)
-    try {
-      const fechaHoraClase = new Date(`${reserva.fecha_clase}T${reserva.clases.horario}`)
-      const ahora = new Date()
-      const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
+  setProcesandoCancelacion(reserva.id)
+  try {
+    const fechaHoraClase = new Date(`${reserva.fecha_clase}T${reserva.clases.horario}`)
+    const ahora = new Date()
+    const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
 
-      if (diferenciaHoras < 12) {
-        throw new Error("No podés cancelar con menos de 12 horas de anticipación. Contactate con el estudio.")
-      }
-
+    if (diferenciaHoras < 5) {
+      throw new Error("No podés cancelar con menos de 5 horas de anticipación. Contactate con el estudio.")
+    }
       const { error: errReserva } = await supabase.from("reservas").update({ estado: 'cancelada' }).eq("id", reserva.id)
       if (errReserva) throw errReserva
 

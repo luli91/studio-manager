@@ -30,7 +30,7 @@ export default function VistaClases({
       <Card className="border-border shadow-sm bg-card">
         <CardHeader className="border-b border-border pb-4">
           <CardTitle className="text-xl text-foreground">Mis próximas reservas</CardTitle>
-          <CardDescription className="text-muted-foreground">No te olvides de cancelar con 12hs de anticipación.</CardDescription>
+          <CardDescription className="text-muted-foreground">No te olvides de cancelar con 5hs de anticipación.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {misReservas.length === 0 ? (

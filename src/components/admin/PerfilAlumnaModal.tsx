@@ -72,44 +72,53 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
   }, [alumna.id, supabase])
 
   const handleAjustarClases = async (operacion: 'sumar' | 'restar') => {
-    setProcesandoAjuste(true)
-    try {
-      const { data: dbPerfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
-      const creditosActuales = Number(dbPerfil?.creditos_clases) || 0
-      const cantidadDePack = Number(packSeleccionado)
-      const ajuste = operacion === 'sumar' ? cantidadDePack : -cantidadDePack
-      const nuevosCreditos = creditosActuales + ajuste
-
-      if (nuevosCreditos < 0) {
-        toast.error("La alumna no puede quedar con clases en negativo.")
-        setProcesandoAjuste(false)
-        return
-      }
-
-      const { error: errorPerfil } = await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", alumna.id)
-      if (errorPerfil) throw errorPerfil
-      
-      const multiplicador = operacion === 'sumar' ? 1 : -1
-      const montoTotal = (cantidadDePack * 5000) * multiplicador 
-      
-      const { error: errorPago } = await supabase.from("pagos").insert({
-        perfil_id: alumna.id,
-        monto: montoTotal,
-        cantidad_clases: cantidadDePack * multiplicador,
-        metodo_pago: 'efectivo'
-      })
-        
-      if (errorPago) throw errorPago
-
-      await refrescarCreditosEnVivo() 
-      onUpdate() 
-      toast.success(operacion === 'sumar' ? `¡Pack sumado y recibo generado!` : `Se restaron ${cantidadDePack} clases.`)
-    } catch (error: any) {
-      toast.error("Error: " + error.message)
-    } finally {
-      setProcesandoAjuste(false)
+  setProcesandoAjuste(true)
+  try {
+    const { data: dbPerfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
+    const creditosActuales = Number(dbPerfil?.creditos_clases) || 0
+    const cantidadDePack = Number(packSeleccionado)
+    
+    // DEFINIMOS LOS NUEVOS PRECIOS DE FLOR
+    const PRECIOS: Record<number, number> = {
+      1: 15000,
+      4: 35000,
+      8: 52000,
+      12: 62000,
     }
+
+    const ajuste = operacion === 'sumar' ? cantidadDePack : -cantidadDePack
+    const nuevosCreditos = creditosActuales + ajuste
+
+    if (nuevosCreditos < 0) {
+      toast.error("La alumna no puede quedar con clases en negativo.")
+      return
+    }
+
+    const { error: errorPerfil } = await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", alumna.id)
+    if (errorPerfil) throw errorPerfil
+    
+    // CALCULAMOS EL MONTO REAL SEGÚN EL PACK
+    const precioPack = PRECIOS[cantidadDePack] || 0
+    const montoTotal = operacion === 'sumar' ? precioPack : -precioPack
+    
+    const { error: errorPago } = await supabase.from("pagos").insert({
+      perfil_id: alumna.id,
+      monto: montoTotal,
+      cantidad_clases: ajuste,
+      metodo_pago: 'efectivo'
+    })
+      
+    if (errorPago) throw errorPago
+
+    await refrescarCreditosEnVivo() 
+    onUpdate() 
+    toast.success(operacion === 'sumar' ? `¡Pack sumado y recibo generado!` : `Se restaron ${cantidadDePack} clases.`)
+  } catch (error: any) {
+    toast.error("Error: " + error.message)
+  } finally {
+    setProcesandoAjuste(false)
   }
+}
 
   const handleGuardarDatos = async () => {
     setGuardando(true)
@@ -190,7 +199,6 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                   <option value={4}>Pack de 4 clases</option>
                   <option value={8}>Pack de 8 clases</option>
                   <option value={12}>Pack de 12 clases</option>
-                  <option value={20}>Pack libre (20)</option>
                 </select>
                 
                 <div className="flex gap-2">
