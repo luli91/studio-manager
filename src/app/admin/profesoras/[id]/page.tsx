@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { 
   ArrowLeft, Mail, Phone, MapPin, CalendarDays, 
-  Clock, Loader2, Plus, UserMinus, Wallet, AlertCircle, CheckCircle2, AlertTriangle
+  Clock, Loader2, Plus, UserMinus, Wallet, AlertCircle, CheckCircle2, AlertTriangle, Sparkles
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -68,7 +68,6 @@ export default function DetalleProfe() {
     cargarDatos()
   }
 
-  // NUEVA FUNCIÓN PARA CONFIRMAR LA AUSENCIA DESDE EL MODAL
   const confirmarAusencia = async () => {
     if (!claseAAusentar) return
     setMarcandoAusencia(true)
@@ -82,7 +81,7 @@ export default function DetalleProfe() {
       if (error) throw error
       
       toast.info("Ausencia registrada", { description: "La clase está libre para suplencias." })
-      setClaseAAusentar(null) // Cerramos el modal
+      setClaseAAusentar(null) 
       cargarDatos()
     } catch (error) {
       toast.error("Error al marcar ausencia")
@@ -105,6 +104,7 @@ export default function DetalleProfe() {
 
   const TarjetaClase = ({ clase, tipo }: { clase: any, tipo: 'hoy' | 'proxima' | 'historial' }) => {
     const esAusente = clase.profesor_ausente_id === id;
+    const esEvento = clase.es_evento;
     
     let colorBorde = "border-slate-200";
     let colorFondoDia = "bg-slate-100 text-slate-500";
@@ -114,6 +114,10 @@ export default function DetalleProfe() {
       colorBorde = "border-red-200 bg-red-50/30";
       colorFondoDia = "bg-red-100 text-red-600";
       etiqueta = <span className="text-[9px] font-black text-red-600 uppercase bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertCircle className="h-3 w-3"/> Ausente</span>;
+    } else if (esEvento) {
+       colorBorde = "border-amber-200 bg-amber-50/30";
+       colorFondoDia = "bg-amber-100 text-amber-700";
+       etiqueta = <span className="text-[9px] font-black text-amber-600 uppercase bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>;
     } else if (tipo === 'hoy') {
       colorBorde = "border-fuchsia-300 shadow-md bg-fuchsia-50/30";
       colorFondoDia = "bg-fuchsia-600 text-white";
@@ -134,7 +138,9 @@ export default function DetalleProfe() {
             <p className="text-xl font-black leading-none">{format(parseISO(clase.fecha), 'dd')}</p>
           </div>
           <div>
-            <p className={`font-bold uppercase text-lg leading-tight tracking-tight ${esAusente ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{clase.nivel}</p>
+            <p className={`font-bold uppercase text-lg leading-tight tracking-tight ${esAusente ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+              {clase.nivel}
+            </p>
             <div className="flex items-center gap-3 mt-1">
               <p className="text-xs font-bold text-slate-500 flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {clase.horario.slice(0,5)} hs
@@ -146,7 +152,6 @@ export default function DetalleProfe() {
         
         {(tipo === 'hoy' || tipo === 'proxima') && !esAusente && (
           <Button 
-            // CAMBIAMOS ESTO PARA QUE ABRA EL MODAL EN VEZ DEL ALERTA NATIVO
             onClick={() => setClaseAAusentar(clase)} 
             variant="ghost" 
             className="bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl font-bold text-xs h-10 transition-colors self-end sm:self-auto opacity-100 md:opacity-0 md:group-hover:opacity-100"
@@ -288,8 +293,6 @@ export default function DetalleProfe() {
         onAsignar={asignarClase} 
       />
 
-      {/* NUEVO MODAL DE AUSENCIA */}
-      {/* NUEVO MODAL DE AUSENCIA */}
       {claseAAusentar && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-6 text-center space-y-5">
@@ -307,7 +310,6 @@ export default function DetalleProfe() {
               La clase quedará sin profesora y <strong>libre para suplencias</strong>, pero la ausencia quedará en el historial.
             </div>
             
-            {/* ACÁ ESTÁ LA CORRECCIÓN: flex-col apila los botones verticalmente */}
             <div className="flex flex-col gap-3 pt-2">
               <Button onClick={confirmarAusencia} disabled={marcandoAusencia} className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 h-12">
                 {marcandoAusencia ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}

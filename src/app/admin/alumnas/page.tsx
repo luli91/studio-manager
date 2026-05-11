@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
-import { Loader2, Search, User as UserIcon, Settings } from "lucide-react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Loader2, Search, User as UserIcon, ChevronRight } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-
 import PerfilAlumnaModal from "@/components/admin/PerfilAlumnaModal"
 
 export default function AdminDashboardPage() {
@@ -47,64 +45,80 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 animate-in fade-in">
+      
+      {/* CABECERA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <UserIcon className="h-8 w-8 text-fuchsia-600" />
             Directorio de Alumnas
           </h1>
-          <p className="text-slate-500 mt-1">Tenés {alumnas.length} alumnas registradas en el estudio.</p>
+          <p className="text-slate-500 font-medium mt-1">Tenés {alumnas.length} alumnas registradas en el estudio.</p>
         </div>
       </div>
 
-      <Card className="border-none shadow-md">
-        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4 rounded-t-xl">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <Input 
-              placeholder="Buscar por nombre o email..." 
-              className="pl-10 bg-white border-slate-200"
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-            />
-          </div>
-        </CardHeader>
+      {/* BUSCADOR */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+        <Input 
+          placeholder="Buscar por nombre o email..." 
+          className="pl-12 h-14 bg-white border-slate-200 rounded-2xl shadow-sm text-base font-medium focus-visible:ring-fuchsia-500"
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+        />
+      </div>
+
+      {/* LISTA DE ALUMNAS (ESTILO WHATSAPP/GMAIL) */}
+      <Card className="border-slate-200 shadow-sm rounded-[2rem] overflow-hidden bg-white">
         <CardContent className="p-0">
-          <div className="divide-y divide-slate-100">
-            {alumnasFiltradas.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">No se encontraron alumnas.</div>
-            ) : (
-              alumnasFiltradas.map((alumna) => (
-                <div key={alumna.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 hover:bg-slate-50 transition-colors">
-                  
-                  {/* ACÁ LIMPIAMOS: Solo mostramos el nombre */}
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-slate-900">{alumna.nombre_completo || "Sin nombre"}</h3>
-                  </div>
-                  
-                  <div className="mt-4 md:mt-0 flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Clases</p>
-                      <p className="text-2xl font-black text-fuchsia-600 flex items-center justify-end gap-1">
-                        {alumna.creditos_clases || 0}
-                      </p>
+          {alumnasFiltradas.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 font-medium bg-slate-50">
+              No se encontraron alumnas con ese nombre.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {alumnasFiltradas.map((alumna) => (
+                <div 
+                  key={alumna.id} 
+                  onClick={() => setAlumnaSeleccionada(alumna)}
+                  className="flex items-center justify-between p-4 sm:px-6 hover:bg-fuchsia-50/50 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4">
+                    {/* BURBUJA DE INICIAL MINIMALISTA */}
+                    <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xl group-hover:bg-fuchsia-100 group-hover:text-fuchsia-600 transition-colors shrink-0">
+                      {alumna.nombre_completo?.charAt(0) || "A"}
                     </div>
                     
-                    <Button 
-                      onClick={() => setAlumnaSeleccionada(alumna)}
-                      className="bg-slate-900 text-white hover:bg-fuchsia-600 shadow-sm"
-                    >
-                      <Settings className="h-4 w-4 mr-2" /> Ficha de Alumna
-                    </Button>
+                    {/* DATOS DE LA ALUMNA */}
+                    <div>
+                      <p className="font-bold text-slate-900 text-base leading-tight group-hover:text-fuchsia-700 transition-colors">
+                        {alumna.nombre_completo || "Sin nombre"}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5 truncate max-w-[150px] sm:max-w-xs">
+                        {alumna.email}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* ESTADO DE CLASES Y FLECHA */}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className={`text-sm font-black ${alumna.creditos_clases > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {alumna.creditos_clases || 0}
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Clases</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-fuchsia-500 group-hover:translate-x-1 transition-all shrink-0" />
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* MODAL FICHA DE ALUMNA */}
       {alumnaSeleccionada && (
         <PerfilAlumnaModal 
           alumna={alumnaSeleccionada} 
