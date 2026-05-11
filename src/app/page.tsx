@@ -26,21 +26,24 @@ export default function LandingEditorial() {
                 <span className="text-transparent" style={{ WebkitTextStroke: '2px #0f172a' }}>KITTY</span>
               </h1>
               
-              <div className="absolute top-1/2 right-0 md:right-20 -translate-y-1/2 animate-bounce duration-[3000ms]">
-                <Image 
-                  src="/Polekitty-logo-blanco.png" 
-                  alt="Logo" 
-                  width={120} 
-                  height={120} 
-                  className="rounded-full border-4 border-white shadow-2xl invert"
-                />
+              <div className="absolute top-1/2 right-0 md:right-5 -translate-y-1/2 animate-bounce duration-[3000ms]">
+                <div className="rounded-full p-5 border-4 border-slate-900 shadow-2xl flex items-center justify-center">
+                  <Image 
+                    src="/LOGO-POLEKITTY-Flor.png" 
+                    alt="Logo" 
+                    width={130} 
+                    height={130} 
+                    className="object-contain w-24 h-24 md:w-[130px] md:h-[130px]" 
+                    priority
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           <div className="max-w-md space-y-6">
             <p className="text-slate-500 text-lg font-medium leading-relaxed">
-              Transformá tu fuerza en arte. Un espacio diseñado para que explores tus límites, te diviertas y pertenezcas a una comunidad real.
+              Streets Group 
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
@@ -58,11 +61,17 @@ export default function LandingEditorial() {
           </div>
 
           {/* INFO ADICIONAL CON EL ICONO SVG DIRECTO */}
-          <div className="flex items-center gap-8 pt-8 border-t border-slate-100">
-            <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
-              <MapPin className="h-4 w-4 text-fuchsia-500" /> Buenos Aires, AR
-            </div>
-            
+        <div className="flex items-center gap-8 pt-8 border-t border-slate-100">
+          <a 
+            href="https://www.google.com/maps/search/?api=1&query=Pedernera+1103,+B1768CLQ+Villa+Madero,+Provincia+de+Buenos+Aires" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-slate-400 hover:text-fuchsia-600 font-bold text-xs uppercase tracking-widest transition-colors group"
+          >
+            <MapPin className="h-4 w-4 text-fuchsia-500 group-hover:scale-110 transition-transform" /> 
+            <span>Pedernera 1103, Villa Madero</span>
+          </a>
+                      
             <a 
               href="https://instagram.com/polekitty__/" 
               target="_blank" 
@@ -92,9 +101,10 @@ export default function LandingEditorial() {
         {/* LADO DERECHO */}
         <div className="flex-1 relative w-full h-[60vh] lg:h-screen animate-in fade-in slide-in-from-right-10 duration-1000">
           <Image 
-            src="/Florperfildenegro.jpg" 
-            alt="Flor Pole Dance"
+            src="/Florportada.jpeg" 
+            alt="Foto de portada de Flor"
             fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover object-center grayscale hover:grayscale-0 transition-all duration-700 cursor-pointer"
             priority
           />
@@ -103,9 +113,9 @@ export default function LandingEditorial() {
             <div className="relative w-32 h-32 flex items-center justify-center animate-spin-slow">
               <svg viewBox="0 0 100 100" className="w-full h-full">
                 <path id="circlePath" d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" fill="none" />
-                <text className="text-[10px] font-black uppercase tracking-[0.3em] fill-fuchsia-600">
+                <text className="text-[10px] font-black uppercase tracking-[0.15em] fill-fuchsia-600">
                   <textPath xlinkHref="#circlePath">
-                    • POWER • FLOW • COMMUNITY • ART •
+                    • STREETS GROUP • STREETS GROUP 
                   </textPath>
                 </text>
               </svg>
