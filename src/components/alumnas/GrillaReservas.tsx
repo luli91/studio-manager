@@ -13,37 +13,36 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
   const [clases, setClases] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
   const [procesandoId, setProcesandoId] = useState<string | null>(null)
+  
+  const [wppEstudio, setWppEstudio] = useState("5491112345678") // Wpp Dinámico
 
   const [mesActual, setMesActual] = useState(new Date())
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(new Date().toISOString().split('T')[0])
 
-  const numeroFlor = "5491112345678" 
-
-  const cargarClasesDisponibles = async () => {
-    const hoy = new Date().toISOString().split('T')[0]
-    
-    const { data, error } = await supabase
-      .from("clases")
-      .select(`
-        *,
-        reservas (id, perfil_id, estado) 
-      `)
-      .gte("fecha", hoy)
-      .order("fecha", { ascending: true })
-      .order("horario", { ascending: true })
-
-    if (data) {
-      const clasesConReservasLimpias = data.map(clase => ({
-        ...clase,
-        reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []
-      }))
-      setClases(clasesConReservasLimpias)
-    }
-    setCargando(false)
-  }
-
   useEffect(() => {
-    cargarClasesDisponibles()
+    const cargarDatosInit = async () => {
+      // Cargamos el Wpp
+      const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "reglas").single()
+      if (config?.valor?.whatsapp_estudio) setWppEstudio(config.valor.whatsapp_estudio)
+
+      // Cargamos la grilla
+      const hoy = new Date().toISOString().split('T')[0]
+      const { data } = await supabase
+        .from("clases")
+        .select(`*, reservas (id, perfil_id, estado)`)
+        .gte("fecha", hoy)
+        .order("fecha", { ascending: true })
+        .order("horario", { ascending: true })
+
+      if (data) {
+        setClases(data.map(clase => ({
+          ...clase,
+          reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []
+        })))
+      }
+      setCargando(false)
+    }
+    cargarDatosInit()
   }, [])
 
   const handleReservar = async (clase: any) => {
@@ -77,7 +76,12 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
 
       toast.success("¡Lugar asegurado con éxito! 🎉")
       
-      await cargarClasesDisponibles() 
+      // Recargamos silenciosamente
+      const hoy = new Date().toISOString().split('T')[0]
+      const { data } = await supabase.from("clases").select(`*, reservas (id, perfil_id, estado)`).gte("fecha", hoy).order("fecha", { ascending: true }).order("horario", { ascending: true })
+      if (data) {
+        setClases(data.map(clase => ({...clase, reservas_confirmadas: clase.reservas?.filter((r: any) => r.estado === 'confirmada') || []})))
+      }
       onReservaExitosa() 
 
     } catch (error: any) {
@@ -110,16 +114,11 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
   const clasesDelDiaSeleccionado = clases.filter(c => c.fecha === fechaSeleccionada)
 
   if (cargando) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <div className="flex justify-center items-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
 
   return (
     <div className="space-y-6">
-      
       <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" size="icon" onClick={() => cambiarMes(-1)} className="text-muted-foreground hover:text-foreground hover:bg-accent">
@@ -217,7 +216,7 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                       <Button 
                         onClick={() => {
                           const msj = `Hola Flor! Me gustaría anotarme al evento de ${clase.nivel} el día ${fechaSeleccionada.split('-').reverse().join('/')} a las ${clase.horario.slice(0,5)}hs. ¿Me pasás los datos para abonar los $${clase.precio}?`
-                          window.open(`https://wa.me/${numeroFlor}?text=${encodeURIComponent(msj)}`, '_blank')
+                          window.open(`https://wa.me/${wppEstudio}?text=${encodeURIComponent(msj)}`, '_blank')
                         }}
                         disabled={estaLlena || yaAnotada}
                         className={
@@ -243,16 +242,13 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                          estaLlena ? "Agotado" : "Anotarme"}
                       </Button>
                     )}
-
                   </div>
-
                 </div>
               )
             })}
           </div>
         )}
       </div>
-
     </div>
   )
 }

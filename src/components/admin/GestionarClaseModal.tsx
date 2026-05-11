@@ -9,16 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 
-const CRONOGRAMA_OFICIAL: Record<string, {nivel: string, hora: string}[]> = {
-  "Lunes": [{nivel: "Pole Sport", hora: "18:00"}, {nivel: "Pole Exotic", hora: "19:15"}],
-  "Martes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Sensual Flow", hora: "17:45"}, {nivel: "Flex", hora: "19:00"}],
-  "Miércoles": [{nivel: "Pole Exotic", hora: "17:45"}, {nivel: "Pole Sport", hora: "19:15"}],
-  "Jueves": [{nivel: "Pole Basic", hora: "17:45"}, {nivel: "Pole Spin", hora: "19:00"}],
-  "Viernes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Pole Exotic", hora: "17:45"}, {nivel: "Pole Sport", hora: "19:15"}, {nivel: "Pole Exotic", hora: "20:30"}],
-  "Sábado": [{nivel: "Pole Mix", hora: "16:30"}],
-  "Domingo": []
-};
-
 const obtenerDiaSemana = (fechaString: string) => {
   const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const [year, month, day] = fechaString.split('-');
@@ -33,15 +23,15 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
   const [alumnas, setAlumnas] = useState<any[]>([])
   const [profesoras, setProfesoras] = useState<any[]>([])
   
+  // CRONOGRAMA Y REGLAS DINÁMICAS
+  const [cronogramaFull, setCronogramaFull] = useState<any>({})
+  const [wppEstudio, setWppEstudio] = useState("5491112345678")
+
   const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">(clase.costo_creditos === 0 ? "pesos" : "creditos")
   const [datosClase, setDatosClase] = useState({
-    nivel: clase.nivel,
-    horario: clase.horario,
-    cupo_maximo: clase.cupo_maximo,
-    profesor_id: clase.profesor_id || "",
-    es_evento: clase.es_evento || false,
-    precio: clase.precio || 0,
-    descripcion: clase.descripcion || ""
+    nivel: clase.nivel, horario: clase.horario, cupo_maximo: clase.cupo_maximo,
+    profesor_id: clase.profesor_id || "", es_evento: clase.es_evento || false,
+    precio: clase.precio || 0, descripcion: clase.descripcion || ""
   })
   const [guardandoCambios, setGuardandoCambios] = useState(false)
 
@@ -53,28 +43,36 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
   const [reservaAEliminar, setReservaAEliminar] = useState<any | null>(null)
   const [pasoEliminacion, setPasoEliminacion] = useState<1 | 2>(1)
   const [eliminando, setEliminando] = useState(false)
-  
   const [confirmarCobro, setConfirmarCobro] = useState(false)
 
   const diaDeLaSemana = clase.fecha ? obtenerDiaSemana(clase.fecha) : "";
-  const opcionesDelDia = CRONOGRAMA_OFICIAL[diaDeLaSemana] || [];
-  
+  const opcionesDelDia = cronogramaFull[diaDeLaSemana] || [];
   const esEventoPago = datosClase.es_evento && formaDePago === "pesos" && datosClase.precio > 0;
 
-  const cargarDatos = async () => {
-    setCargando(true)
-    const [resReservas, resAlumnas, resProfes] = await Promise.all([
-      supabase.from("reservas").select("id, estado, fecha_clase, perfiles(id, nombre_completo, nombre, apellido, email, telefono)").eq("clase_id", clase.id).eq("estado", "confirmada"),
-      supabase.from("perfiles").select("id, nombre_completo, email, telefono, creditos_clases").eq("rol", "alumna").order("nombre_completo"),
-      supabase.from("perfiles").select("id, nombre_completo").eq("rol", "profe").order("nombre_completo")
-    ])
-    if (resReservas.data) setReservas(resReservas.data)
-    if (resAlumnas.data) setAlumnas(resAlumnas.data)
-    if (resProfes.data) setProfesoras(resProfes.data)
-    setCargando(false)
-  }
-
-  useEffect(() => { cargarDatos() }, [clase.id])
+  useEffect(() => { 
+    const cargarDatos = async () => {
+      setCargando(true)
+      const [resReservas, resAlumnas, resProfes, resConfig] = await Promise.all([
+        supabase.from("reservas").select("id, estado, fecha_clase, perfiles(id, nombre_completo, nombre, apellido, email, telefono)").eq("clase_id", clase.id).eq("estado", "confirmada"),
+        supabase.from("perfiles").select("id, nombre_completo, email, telefono, creditos_clases").eq("rol", "alumna").order("nombre_completo"),
+        supabase.from("perfiles").select("id, nombre_completo").eq("rol", "profe").order("nombre_completo"),
+        supabase.from("configuracion").select("*")
+      ])
+      
+      if (resReservas.data) setReservas(resReservas.data)
+      if (resAlumnas.data) setAlumnas(resAlumnas.data)
+      if (resProfes.data) setProfesoras(resProfes.data)
+      
+      if (resConfig.data) {
+        const c = resConfig.data.find(x => x.key === 'cronograma')?.valor
+        const r = resConfig.data.find(x => x.key === 'reglas')?.valor
+        if (c) setCronogramaFull(c)
+        if (r?.whatsapp_estudio) setWppEstudio(r.whatsapp_estudio)
+      }
+      setCargando(false)
+    }
+    cargarDatos() 
+  }, [clase.id, supabase])
 
   const handleGuardarCambiosClase = async () => {
     if (datosClase.es_evento) {
@@ -124,29 +122,19 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
     setAgregando(true)
     try {
       const { error: errorReserva } = await supabase.from("reservas").upsert({ 
-        perfil_id: alumnaSeleccionada, 
-        clase_id: clase.id, 
-        estado: "confirmada", 
-        fecha_clase: clase.fecha
+        perfil_id: alumnaSeleccionada, clase_id: clase.id, estado: "confirmada", fecha_clase: clase.fecha
       }, { onConflict: 'perfil_id,clase_id,fecha_clase' })
       
       if (errorReserva) throw errorReserva
 
       if (esEventoPago) {
         const { error: errPago } = await supabase.from("pagos").insert([{
-          perfil_id: alumnaSeleccionada,
-          monto: datosClase.precio,
-          cantidad_clases: 0, 
-          fecha: new Date().toISOString(),
-          concepto: `Entrada Evento: ${datosClase.nivel}`,
-          metodo_pago: "Efectivo" 
+          perfil_id: alumnaSeleccionada, monto: datosClase.precio, cantidad_clases: 0, 
+          fecha: new Date().toISOString(), concepto: `Entrada Evento: ${datosClase.nivel}`, metodo_pago: "Efectivo" 
         }])
         
-        if (errPago) {
-          toast.error("Error al guardar en finanzas: " + errPago.message);
-        } else {
-          toast.success("¡Cobro sumado a Finanzas y alumna anotada!");
-        }
+        if (errPago) toast.error("Error al guardar en finanzas: " + errPago.message);
+        else toast.success("¡Cobro sumado a Finanzas y alumna anotada!");
 
         if (enviarWpp && alumna?.telefono) {
           const numLimpio = alumna.telefono.replace(/\D/g, '')
@@ -162,17 +150,13 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
         toast.success("Alumna agregada a la clase")
       }
 
-      setAlumnaSeleccionada(""); setBusquedaAlumna(""); setConfirmarCobro(false); cargarDatos(); onUpdate();
+      setAlumnaSeleccionada(""); setBusquedaAlumna(""); setConfirmarCobro(false);
+      onUpdate(); onClose();
     } catch (error: any) { 
       toast.error(error.message) 
     } finally { 
       setAgregando(false) 
     }
-  }
-
-  const iniciarEliminacion = (reserva: any) => {
-    setReservaAEliminar(reserva)
-    setPasoEliminacion(1)
   }
 
   const confirmarEliminacion = async (devolverClase: boolean) => {
@@ -183,19 +167,12 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
       
       if (esEventoPago) {
         const { error: errDev } = await supabase.from("pagos").insert([{
-          perfil_id: reservaAEliminar.perfiles.id,
-          monto: -datosClase.precio,
-          cantidad_clases: 0,
-          fecha: new Date().toISOString(),
-          concepto: `Devolución Evento: ${datosClase.nivel}`,
-          metodo_pago: "Efectivo"
+          perfil_id: reservaAEliminar.perfiles.id, monto: -datosClase.precio, cantidad_clases: 0,
+          fecha: new Date().toISOString(), concepto: `Devolución Evento: ${datosClase.nivel}`, metodo_pago: "Efectivo"
         }])
         
-        if (errDev) {
-          toast.error("Error al asentar la devolución en Finanzas: " + errDev.message);
-        } else {
-          toast.success(`Baja exitosa. Se restaron $${datosClase.precio} de Finanzas automáticamente.`)
-        }
+        if (errDev) toast.error("Error en Finanzas: " + errDev.message);
+        else toast.success(`Baja exitosa. Se restaron $${datosClase.precio} de Finanzas.`)
 
       } else if (devolverClase) {
         const { data: perfilActual } = await supabase.from("perfiles").select("creditos_clases").eq("id", reservaAEliminar.perfiles.id).single()
@@ -205,7 +182,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
         toast.success("Cupo liberado (sin devolución)")
       }
 
-      cargarDatos(); onUpdate();
+      onUpdate(); onClose();
     } catch (error: any) { toast.error(error.message) } finally { setEliminando(false); setReservaAEliminar(null) }
   }
 
@@ -246,7 +223,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                             }}
                           >
                             <option value="" disabled>Seleccioná del listado...</option>
-                            {opcionesDelDia.map(opc => (
+                            {opcionesDelDia.map((opc: any) => (
                               <option key={`${opc.nivel}-${opc.hora}`} value={`${opc.nivel}|${opc.hora}`}>
                                 {opc.hora} hs - {opc.nivel}
                               </option>
@@ -406,7 +383,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                             <p className="font-bold text-foreground text-sm">{res.perfiles?.nombre ? `${res.perfiles.nombre} ${res.perfiles.apellido}` : res.perfiles?.nombre_completo}</p>
                             <p className="text-[10px] text-muted-foreground font-medium">{res.perfiles?.email}</p>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => iniciarEliminacion(res)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => {setReservaAEliminar(res); setPasoEliminacion(1)}} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       ))
                     }

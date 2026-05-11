@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 
-const ZONAS: Record<string, string[]> = {
+const ZONAS: Record<string, string[]> = { /*... (mantener el diccionario de zonas igual) ...*/
   "CABA": ["Agronomía", "Almagro", "Balvanera", "Barracas", "Belgrano", "Boedo", "Caballito", "Chacarita", "Coghlan", "Colegiales", "Constitución", "Flores", "Floresta", "La Boca", "La Paternal", "Liniers", "Mataderos", "Monte Castro", "Monserrat", "Nueva Pompeya", "Núñez", "Palermo", "Parque Avellaneda", "Parque Chacabuco", "Parque Chas", "Parque Patricios", "Puerto Madero", "Recoleta", "Retiro", "Saavedra", "San Cristóbal", "San Nicolás", "San Telmo", "Vélez Sársfield", "Versalles", "Villa Crespo", "Villa del Parque", "Villa Devoto", "Villa General Mitre", "Villa Lugano", "Villa Luro", "Villa Ortúzar", "Villa Pueyrredón", "Villa Real", "Villa Riachuelo", "Villa Santa Rita", "Villa Soldati", "Villa Urquiza"],
   "GBA Norte": ["Escobar", "José C. Paz", "Malvinas Argentinas", "Pilar", "San Fernando", "San Isidro", "San Martín", "Tigre", "Vicente López"],
   "GBA Sur": ["Almirante Brown", "Avellaneda", "Berazategui", "Esteban Echeverría", "Ezeiza", "Florencio Varela", "Lanús", "Lomas de Zamora", "Quilmes"],
@@ -37,111 +37,70 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
   const [guardando, setGuardando] = useState(false)
   
   const [formData, setFormData] = useState({
-    nombre: alumna.nombre || "",
-    apellido: alumna.apellido || "",
-    telefono: alumna.telefono || "",
-    contacto_urgencia: alumna.contacto_urgencia || "",
-    calle: alumna.calle || "",
-    numero_calle: alumna.numero_calle || "",
-    provincia: alumna.provincia || "",
-    barrio_localidad: alumna.barrio_localidad || ""
+    nombre: alumna.nombre || "", apellido: alumna.apellido || "", telefono: alumna.telefono || "", contacto_urgencia: alumna.contacto_urgencia || "", calle: alumna.calle || "", numero_calle: alumna.numero_calle || "", provincia: alumna.provincia || "", barrio_localidad: alumna.barrio_localidad || ""
   })
 
   const refrescarCreditosEnVivo = async () => {
     const { data } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
-    if (data) {
-      setCreditos(Number(data.creditos_clases) || 0)
-    }
+    if (data) setCreditos(Number(data.creditos_clases) || 0)
   }
 
   useEffect(() => {
     const cargarHistorial = async () => {
-      const { data, error } = await supabase
-        .from("reservas")
-        .select("id, estado, fecha_clase, clases(nivel, horario)")
-        .eq("perfil_id", alumna.id)
-        .eq("estado", "confirmada")
-        .order("fecha_clase", { ascending: false })
-
+      const { data } = await supabase.from("reservas").select("id, estado, fecha_clase, clases(nivel, horario)").eq("perfil_id", alumna.id).eq("estado", "confirmada").order("fecha_clase", { ascending: false })
       if (data) setHistorial(data)
       setCargandoHistorial(false)
     }
-    
     cargarHistorial()
     refrescarCreditosEnVivo()
   }, [alumna.id, supabase])
 
   const handleAjustarClases = async (operacion: 'sumar' | 'restar') => {
-  setProcesandoAjuste(true)
-  try {
-    const { data: dbPerfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
-    const creditosActuales = Number(dbPerfil?.creditos_clases) || 0
-    const cantidadDePack = Number(packSeleccionado)
-    
-    // DEFINIMOS LOS NUEVOS PRECIOS DE FLOR
-    const PRECIOS: Record<number, number> = {
-      1: 15000,
-      4: 35000,
-      8: 52000,
-      12: 62000,
-    }
+    setProcesandoAjuste(true)
+    try {
+      // 1. CARGAMOS LOS PRECIOS DE LA DB
+      const { data: configPrecios } = await supabase.from("configuracion").select("valor").eq("key", "precios_packs").single()
+      const PRECIOS = configPrecios?.valor || { 1: 15000, 4: 35000, 8: 52000, 12: 62000, 20: 100000 }
 
-    const ajuste = operacion === 'sumar' ? cantidadDePack : -cantidadDePack
-    const nuevosCreditos = creditosActuales + ajuste
-
-    if (nuevosCreditos < 0) {
-      toast.error("La alumna no puede quedar con clases en negativo.")
-      return
-    }
-
-    const { error: errorPerfil } = await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", alumna.id)
-    if (errorPerfil) throw errorPerfil
-    
-    // CALCULAMOS EL MONTO REAL SEGÚN EL PACK
-    const precioPack = PRECIOS[cantidadDePack] || 0
-    const montoTotal = operacion === 'sumar' ? precioPack : -precioPack
-    
-    const { error: errorPago } = await supabase.from("pagos").insert({
-      perfil_id: alumna.id,
-      monto: montoTotal,
-      cantidad_clases: ajuste,
-      metodo_pago: 'efectivo'
-    })
+      const { data: dbPerfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
+      const creditosActuales = Number(dbPerfil?.creditos_clases) || 0
+      const cantidadDePack = Number(packSeleccionado)
       
-    if (errorPago) throw errorPago
+      const ajuste = operacion === 'sumar' ? cantidadDePack : -cantidadDePack
+      const nuevosCreditos = creditosActuales + ajuste
 
-    await refrescarCreditosEnVivo() 
-    onUpdate() 
-    toast.success(operacion === 'sumar' ? `¡Pack sumado y recibo generado!` : `Se restaron ${cantidadDePack} clases.`)
-  } catch (error: any) {
-    toast.error("Error: " + error.message)
-  } finally {
-    setProcesandoAjuste(false)
+      if (nuevosCreditos < 0) {
+        toast.error("La alumna no puede quedar con clases en negativo.")
+        setProcesandoAjuste(false); return;
+      }
+
+      const { error: errorPerfil } = await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", alumna.id)
+      if (errorPerfil) throw errorPerfil
+      
+      const precioPack = PRECIOS[cantidadDePack] || 0
+      const montoTotal = operacion === 'sumar' ? precioPack : -precioPack
+      
+      const { error: errorPago } = await supabase.from("pagos").insert({
+        perfil_id: alumna.id, monto: montoTotal, cantidad_clases: ajuste, metodo_pago: 'efectivo'
+      })
+        
+      if (errorPago) throw errorPago
+
+      await refrescarCreditosEnVivo(); onUpdate(); 
+      toast.success(operacion === 'sumar' ? `¡Pack sumado y recibo generado!` : `Se restaron ${cantidadDePack} clases.`)
+    } catch (error: any) { toast.error("Error: " + error.message) } finally { setProcesandoAjuste(false) }
   }
-}
 
   const handleGuardarDatos = async () => {
     setGuardando(true)
     try {
       const nombreArmado = `${formData.nombre} ${formData.apellido}`.trim()
       const direccionArmada = `${formData.calle} ${formData.numero_calle}, ${formData.barrio_localidad}, ${formData.provincia}`
-
-      const { error } = await supabase.from("perfiles").update({
-        ...formData,
-        nombre_completo: nombreArmado,
-        direccion: direccionArmada
-      }).eq("id", alumna.id)
-
+      const { error } = await supabase.from("perfiles").update({ ...formData, nombre_completo: nombreArmado, direccion: direccionArmada }).eq("id", alumna.id)
       if (error) throw error
-      
       toast.success("Ficha de la alumna actualizada")
-      setEditando(false)
-      onUpdate()
-    } catch (error: any) {
-      toast.error("Error al guardar: " + error.message)
-    } finally {
-      setGuardando(false)
-    }
+      setEditando(false); onUpdate();
+    } catch (error: any) { toast.error("Error al guardar: " + error.message) } finally { setGuardando(false) }
   }
 
   const handleEliminarAlumna = async () => {
@@ -150,12 +109,8 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
     try {
       const { error } = await supabase.from("perfiles").delete().eq("id", alumna.id)
       if (error) throw error
-      toast.success("Alumna eliminada")
-      onUpdate()
-      onClose()
-    } catch (error: any) {
-      toast.error("Error: " + error.message)
-    }
+      toast.success("Alumna eliminada"); onUpdate(); onClose();
+    } catch (error: any) { toast.error("Error: " + error.message) }
   }
 
   const formatearFecha = (fechaString: string) => {
@@ -199,6 +154,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                   <option value={4}>Pack de 4 clases</option>
                   <option value={8}>Pack de 8 clases</option>
                   <option value={12}>Pack de 12 clases</option>
+                  <option value={20}>Pack libre (20)</option>
                 </select>
                 
                 <div className="flex gap-2">

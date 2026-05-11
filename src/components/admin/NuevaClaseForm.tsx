@@ -9,16 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 
-const CRONOGRAMA_OFICIAL: Record<string, {nivel: string, hora: string}[]> = {
-  "Lunes": [{nivel: "Pole Sport", hora: "18:00"}, {nivel: "Pole Exotic", hora: "19:15"}],
-  "Martes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Sensual Flow", hora: "17:45"}, {nivel: "Flex", hora: "19:00"}],
-  "Miércoles": [{nivel: "Pole Exotic", hora: "17:45"}, {nivel: "Pole Sport", hora: "19:15"}],
-  "Jueves": [{nivel: "Pole Basic", hora: "17:45"}, {nivel: "Pole Spin", hora: "19:00"}],
-  "Viernes": [{nivel: "Funcional", hora: "10:30"}, {nivel: "Pole Exotic", hora: "17:45"}, {nivel: "Pole Sport", hora: "19:15"}, {nivel: "Pole Exotic", hora: "20:30"}],
-  "Sábado": [{nivel: "Pole Mix", hora: "16:30"}],
-  "Domingo": []
-};
-
 const obtenerDiaSemana = (fechaString: string) => {
   const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const [year, month, day] = fechaString.split('-');
@@ -30,30 +20,30 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
   const supabase = createClient()
   const [cargando, setCargando] = useState(false)
   const [profesoras, setProfesoras] = useState<any[]>([])
+  
+  // CRONOGRAMA DINÁMICO
+  const [cronogramaFull, setCronogramaFull] = useState<any>({})
+
   const [repetir, setRepetir] = useState(false)
   const [mesesRepeticion, setMesesRepeticion] = useState(1)
   const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">("creditos")
 
   const [clase, setClase] = useState({
-    fecha: "",
-    horario: "",
-    nivel: "",
-    cupo_maximo: 10,
-    es_evento: false,
-    precio: 0,
-    descripcion: "",
-    profesor_id: ""
+    fecha: "", horario: "", nivel: "", cupo_maximo: 10, es_evento: false, precio: 0, descripcion: "", profesor_id: ""
   })
 
   const diaDeLaSemana = clase.fecha ? obtenerDiaSemana(clase.fecha) : "";
-  const opcionesDelDia = CRONOGRAMA_OFICIAL[diaDeLaSemana] || [];
+  const opcionesDelDia = cronogramaFull[diaDeLaSemana] || [];
 
   useEffect(() => {
-    const cargarProfes = async () => {
-      const { data } = await supabase.from("perfiles").select("id, nombre_completo").eq("rol", "profe").order("nombre_completo");
-      if (data) setProfesoras(data);
+    const cargarTodo = async () => {
+      const { data: dataProfes } = await supabase.from("perfiles").select("id, nombre_completo").eq("rol", "profe").order("nombre_completo");
+      if (dataProfes) setProfesoras(dataProfes);
+
+      const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "cronograma").single()
+      if (config) setCronogramaFull(config.valor)
     };
-    cargarProfes();
+    cargarTodo();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,12 +97,7 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
           <Label className="text-foreground font-bold flex items-center gap-2 leading-none cursor-pointer"><Sparkles className="h-4 w-4 text-primary"/> ¿Es un Evento Especial?</Label>
           <p className="text-[10px] text-muted-foreground font-medium">Workshops, clases libres o seminarios.</p>
         </div>
-        <Switch 
-          checked={clase.es_evento} 
-          onCheckedChange={c => {
-            setClase({...clase, es_evento: c, nivel: "", horario: ""});
-          }} 
-        />
+        <Switch checked={clase.es_evento} onCheckedChange={c => { setClase({...clase, es_evento: c, nivel: "", horario: ""}); }} />
       </div>
 
       <div className="space-y-4 bg-muted/30 p-5 rounded-2xl border border-border">
@@ -134,7 +119,7 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
                 }}
               >
                 <option value="" disabled>Seleccioná del listado...</option>
-                {opcionesDelDia.map(opc => (
+                {opcionesDelDia.map((opc: any) => (
                   <option key={`${opc.nivel}-${opc.hora}`} value={`${opc.nivel}|${opc.hora}`}>
                     {opc.hora} hs - {opc.nivel}
                   </option>

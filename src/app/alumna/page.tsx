@@ -19,11 +19,12 @@ export default function DashboardAlumna() {
   const [perfil, setPerfil] = useState<any>(null)
   const [misReservas, setMisReservas] = useState<any[]>([])
   const [misPagos, setMisPagos] = useState<any[]>([])
+  const [horasCancelacion, setHorasCancelacion] = useState<number>(5) // Estado para la regla
   
   const [procesandoCancelacion, setProcesandoCancelacion] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [seccionActiva, setSeccionActiva] = useState("clases")
-  const [menuAbierto, setMenuAbierto] = useState(false) // <-- EL ESTADO PARA EL MENÚ
+  const [menuAbierto, setMenuAbierto] = useState(false)
 
   const cargarPerfilYReservas = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -50,6 +51,11 @@ export default function DashboardAlumna() {
       .order("fecha", { ascending: false })
 
     if (dataPagos) setMisPagos(dataPagos)
+
+    // OBTENER REGLAS DINÁMICAS
+    const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "reglas").single()
+    if (config?.valor?.horas_cancelacion) setHorasCancelacion(config.valor.horas_cancelacion)
+
     setCargando(false)
   }
 
@@ -61,15 +67,17 @@ export default function DashboardAlumna() {
   }
 
   const handleCancelarReserva = async (reserva: any) => {
-  setProcesandoCancelacion(reserva.id)
-  try {
-    const fechaHoraClase = new Date(`${reserva.fecha_clase}T${reserva.clases.horario}`)
-    const ahora = new Date()
-    const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
+    setProcesandoCancelacion(reserva.id)
+    try {
+      const fechaHoraClase = new Date(`${reserva.fecha_clase}T${reserva.clases.horario}`)
+      const ahora = new Date()
+      const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
 
-    if (diferenciaHoras < 5) {
-      throw new Error("No podés cancelar con menos de 5 horas de anticipación. Contactate con el estudio.")
-    }
+      // USAMOS LA VARIABLE DE LA BASE DE DATOS
+      if (diferenciaHoras < horasCancelacion) {
+        throw new Error(`No podés cancelar con menos de ${horasCancelacion} horas de anticipación. Contactate con el estudio.`)
+      }
+
       const { error: errReserva } = await supabase.from("reservas").update({ estado: 'cancelada' }).eq("id", reserva.id)
       if (errReserva) throw errReserva
 
@@ -93,7 +101,6 @@ export default function DashboardAlumna() {
   return (
     <div className="flex min-h-screen bg-background font-sans text-foreground">
       
-      {/* Botón Hamburguesa (Mobile) */}
       <button 
         className="md:hidden fixed top-4 left-4 z-50 bg-primary p-2 rounded-md text-primary-foreground shadow-lg"
         onClick={() => setMenuAbierto(!menuAbierto)}
@@ -101,7 +108,6 @@ export default function DashboardAlumna() {
         {menuAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
-      {/* Overlay Oscuro (Mobile) */}
       {menuAbierto && (
         <div 
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden" 
@@ -109,7 +115,6 @@ export default function DashboardAlumna() {
         />
       )}
 
-      {/* SIDEBAR ALUMNAS (Oscuro igual que admin) */}
       <aside className={`fixed top-0 left-0 h-screen w-64 bg-slate-950 text-slate-50 p-8 flex flex-col z-40 transform transition-transform duration-300 ${menuAbierto ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0 shadow-xl border-r border-border/10`}>
         <div className="mb-10 flex flex-col items-center text-center">
           <div className="mb-1 block"> 
@@ -171,7 +176,7 @@ export default function DashboardAlumna() {
             </div>
           </div>
 
-          {seccionActiva === "clases" && <VistaClases perfil={perfil} misReservas={misReservas} onCancelar={handleCancelarReserva} procesandoCancelacion={procesandoCancelacion} onRecargar={cargarPerfilYReservas} />}
+          {seccionActiva === "clases" && <VistaClases perfil={perfil} misReservas={misReservas} onCancelar={handleCancelarReserva} procesandoCancelacion={procesandoCancelacion} onRecargar={cargarPerfilYReservas} horasCancelacion={horasCancelacion} />}
           {seccionActiva === "perfil" && <VistaPerfil perfil={perfil} alActualizar={cargarPerfilYReservas} />}
           {seccionActiva === "pagos" && <VistaPagos misPagos={misPagos} />}
           

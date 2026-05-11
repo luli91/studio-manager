@@ -9,13 +9,15 @@ export default function VistaClases({
   misReservas, 
   onCancelar, 
   procesandoCancelacion, 
-  onRecargar 
+  onRecargar,
+  horasCancelacion
 }: { 
   perfil: any, 
   misReservas: any[], 
   onCancelar: (reserva: any) => void, 
   procesandoCancelacion: string | null,
-  onRecargar: () => void 
+  onRecargar: () => void,
+  horasCancelacion: number
 }) {
 
   const formatearFechaHermosa = (fechaString: string) => {
@@ -30,7 +32,7 @@ export default function VistaClases({
       <Card className="border-border shadow-sm bg-card">
         <CardHeader className="border-b border-border pb-4">
           <CardTitle className="text-xl text-foreground">Mis próximas reservas</CardTitle>
-          <CardDescription className="text-muted-foreground">No te olvides de cancelar con 5hs de anticipación.</CardDescription>
+          <CardDescription className="text-muted-foreground">No te olvides de cancelar con {horasCancelacion}hs de anticipación.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {misReservas.length === 0 ? (
@@ -45,17 +47,13 @@ export default function VistaClases({
                 return (
                   <div key={reserva.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl shadow-sm transition-colors gap-4 ${esEvento ? 'border-primary bg-secondary/30 hover:border-primary/80' : 'border-border bg-background hover:border-primary/50'}`}>
                     <div className="flex items-center gap-4">
-                      
-                      {/* CAJITA DE LA FECHA */}
                       <div className={`${esEvento ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'} p-3 rounded-xl flex flex-col items-center justify-center min-w-[70px] border border-border`}>
                         <p className={`text-xs font-bold uppercase ${esEvento ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{reserva.clases?.dia_semana.slice(0,3)}</p>
                         <p className="text-lg font-black">{formatearFechaHermosa(reserva.fecha_clase)}</p>
                       </div>
-                      
                       <div>
                         <h4 className="font-bold text-foreground flex items-center gap-2">
                           {reserva.clases?.nivel}
-                          {/* ETIQUETA DE EVENTO */}
                           {esEvento && <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider ml-1 flex items-center gap-1"><Sparkles className="h-3 w-3"/> Evento</span>}
                         </h4>
                         <p className="text-sm flex items-center gap-1 mt-0.5 text-muted-foreground font-medium">
@@ -63,8 +61,6 @@ export default function VistaClases({
                         </p>
                       </div>
                     </div>
-                    
-                    {/* BOTÓN CANCELAR */}
                     <Button 
                       variant="outline" 
                       onClick={() => onCancelar(reserva)}
