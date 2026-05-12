@@ -19,7 +19,12 @@ export default function DashboardAlumna() {
   const [perfil, setPerfil] = useState<any>(null)
   const [misReservas, setMisReservas] = useState<any[]>([])
   const [misPagos, setMisPagos] = useState<any[]>([])
-  const [horasCancelacion, setHorasCancelacion] = useState<number>(5) // Estado para la regla
+  
+  // NUEVO: Estados para guardar los eventos
+  const [eventosLanding, setEventosLanding] = useState<any[]>([])
+  const [clasesEventos, setClasesEventos] = useState<any[]>([])
+
+  const [horasCancelacion, setHorasCancelacion] = useState<number>(5) 
   
   const [procesandoCancelacion, setProcesandoCancelacion] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -52,6 +57,13 @@ export default function DashboardAlumna() {
 
     if (dataPagos) setMisPagos(dataPagos)
 
+    // NUEVO: OBTENER LOS EVENTOS DE LA LANDING Y LAS CLASES MARCADAS COMO EVENTO
+    const { data: dataEventos } = await supabase.from("landing_eventos").select("*").eq("activo", true)
+    if (dataEventos) setEventosLanding(dataEventos)
+
+    const { data: dataClasesEventos } = await supabase.from("clases").select("*").eq("es_evento", true)
+    if (dataClasesEventos) setClasesEventos(dataClasesEventos)
+
     // OBTENER REGLAS DINÁMICAS
     const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "reglas").single()
     if (config?.valor?.horas_cancelacion) setHorasCancelacion(config.valor.horas_cancelacion)
@@ -73,7 +85,6 @@ export default function DashboardAlumna() {
       const ahora = new Date()
       const diferenciaHoras = (fechaHoraClase.getTime() - ahora.getTime()) / (1000 * 60 * 60)
 
-      // USAMOS LA VARIABLE DE LA BASE DE DATOS
       if (diferenciaHoras < horasCancelacion) {
         throw new Error(`No podés cancelar con menos de ${horasCancelacion} horas de anticipación. Contactate con el estudio.`)
       }
@@ -123,7 +134,8 @@ export default function DashboardAlumna() {
               alt="Logo Alumnas"
               width={90}    
               height={30}    
-              className="object-contain invert" 
+              className="object-contain invert"
+              style={{ width: 'auto', height: 'auto' }}
               priority
             />
           </div>
@@ -180,11 +192,68 @@ export default function DashboardAlumna() {
           {seccionActiva === "perfil" && <VistaPerfil perfil={perfil} alActualizar={cargarPerfilYReservas} />}
           {seccionActiva === "pagos" && <VistaPagos misPagos={misPagos} />}
           
+          {/* NUEVA VISTA EVENTOS INTERACTIVA */}
           {seccionActiva === "eventos" && (
-            <div className="bg-card border border-border rounded-xl p-12 shadow-sm text-center">
-              <Sparkles className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-foreground">Eventos de la comunidad</h3>
-              <p className="text-muted-foreground mt-2">Pronto anunciaremos nuevos eventos, workshops y masterclasses.</p>
+            <div className="space-y-6 animate-in fade-in">
+              <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">Próximos Eventos y Masterclasses</h2>
+                </div>
+                <p className="text-muted-foreground text-sm">Descubrí las clases especiales y eventos que tenemos preparados en el estudio.</p>
+              </div>
+
+              {(eventosLanding.length > 0 || clasesEventos.length > 0) ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Tarjetas de Eventos Landing */}
+                  {eventosLanding.map(ev => (
+                    <div key={ev.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
+                      <div className="h-48 relative bg-slate-100">
+                        {ev.imagen_url ? (
+                          <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                            <CalendarDays className="h-10 w-10 opacity-30" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-6 flex flex-col flex-1">
+                        <h3 className="text-xl font-black uppercase text-foreground">{ev.titulo}</h3>
+                        <p className="text-muted-foreground mt-2 mb-6 flex-1 text-sm">{ev.descripcion}</p>
+                        <div className="flex items-center justify-between pt-4 border-t border-border">
+                          <span className="text-lg font-black text-foreground">${ev.precio}</span>
+                          <Button onClick={() => window.open(`https://wa.me/5491141429761?text=Hola Flor! Quiero info/anotarme al evento: ${ev.titulo}`, '_blank')} className="font-bold">Consultar</Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Tarjetas de Clases Especiales */}
+                  {clasesEventos.map(clase => (
+                    <div key={clase.id} className="bg-card border border-primary/20 rounded-xl overflow-hidden shadow-sm flex flex-col p-6">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Clase Especial</span>
+                          <span className="font-bold text-muted-foreground">{clase.dia_semana} {clase.horario}</span>
+                        </div>
+                        <h3 className="text-xl font-black uppercase text-foreground mt-2">{clase.nivel || "Clase Especial de la semana"}</h3>
+                        <p className="text-muted-foreground mt-2 text-sm">Esta clase está marcada como evento en la grilla y requiere <strong className="text-foreground">{clase.costo_creditos} crédito(s)</strong> para anotarse.</p>
+                      </div>
+                      <div className="pt-6 mt-4 border-t border-border">
+                        <Button onClick={() => setSeccionActiva("clases")} variant="outline" className="w-full font-bold">Ir a la Grilla para Reservar</Button>
+                      </div>
+                    </div>
+                  ))}
+
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-xl p-12 shadow-sm text-center">
+                  <Sparkles className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                  <h3 className="text-xl font-bold text-foreground">No hay eventos activos</h3>
+                  <p className="text-muted-foreground mt-2">Pronto anunciaremos nuevos eventos, workshops y masterclasses.</p>
+                </div>
+              )}
             </div>
           )}
 
