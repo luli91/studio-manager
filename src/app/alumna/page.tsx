@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Loader2, CalendarDays, User as UserIcon, CreditCard, Sparkles, LogOut, CheckCircle2, Menu, X } from "lucide-react"
+import { Loader2, CalendarDays, User as UserIcon, CreditCard, Sparkles, LogOut, CheckCircle2, Menu, X, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 import VistaClases from "@/components/alumnas/VistaClases"
@@ -19,17 +19,33 @@ export default function DashboardAlumna() {
   const [perfil, setPerfil] = useState<any>(null)
   const [misReservas, setMisReservas] = useState<any[]>([])
   const [misPagos, setMisPagos] = useState<any[]>([])
-  
-  // NUEVO: Estados para guardar los eventos
   const [eventosLanding, setEventosLanding] = useState<any[]>([])
   const [clasesEventos, setClasesEventos] = useState<any[]>([])
+  
+  // NUEVO: Estados para los Packs de Mercado Pago
+  const [packs, setPacks] = useState<any[]>([])
+  const [comprando, setComprando] = useState<string | null>(null)
 
   const [horasCancelacion, setHorasCancelacion] = useState<number>(5) 
-  
   const [procesandoCancelacion, setProcesandoCancelacion] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [seccionActiva, setSeccionActiva] = useState("clases")
   const [menuAbierto, setMenuAbierto] = useState(false)
+
+  // NUEVO: Detectar si viene de pagar con éxito en Mercado Pago
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pagoStatus = urlParams.get('pago');
+    
+    if (pagoStatus === 'exitoso') {
+      toast.success("¡Pago exitoso! Tus nuevas clases ya están acreditadas.");
+      // Limpiamos la URL para que no vuelva a saltar el cartel al refrescar
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (pagoStatus === 'error') {
+      toast.error("Hubo un problema con el pago en Mercado Pago. Intentá nuevamente.");
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [])
 
   const cargarPerfilYReservas = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -57,14 +73,27 @@ export default function DashboardAlumna() {
 
     if (dataPagos) setMisPagos(dataPagos)
 
-    // NUEVO: OBTENER LOS EVENTOS DE LA LANDING Y LAS CLASES MARCADAS COMO EVENTO
     const { data: dataEventos } = await supabase.from("landing_eventos").select("*").eq("activo", true)
     if (dataEventos) setEventosLanding(dataEventos)
 
     const { data: dataClasesEventos } = await supabase.from("clases").select("*").eq("es_evento", true)
     if (dataClasesEventos) setClasesEventos(dataClasesEventos)
 
-    // OBTENER REGLAS DINÁMICAS
+    // NUEVO: Leemos los precios desde la configuración de Flor
+    const { data: configPrecios } = await supabase.from("configuracion").select("valor").eq("key", "precios_packs").single()
+    if (configPrecios && configPrecios.valor) {
+      const packsFormateados = Object.entries(configPrecios.valor)
+        .map(([cantidad, precio]) => ({
+          id: `pack-${cantidad}`,
+          nombre: cantidad === "1" ? "Clase Suelta" : `Pack ${cantidad} Clases`,
+          cantidad_clases: Number(cantidad),
+          precio: Number(precio)
+        }))
+        .sort((a, b) => a.cantidad_clases - b.cantidad_clases); 
+      
+      setPacks(packsFormateados);
+    }
+
     const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "reglas").single()
     if (config?.valor?.horas_cancelacion) setHorasCancelacion(config.valor.horas_cancelacion)
 
@@ -107,6 +136,33 @@ export default function DashboardAlumna() {
     }
   }
 
+  // NUEVO: Función para generar el link de pago y redirigir
+  const handleComprarPack = async (pack: any) => {
+    setComprando(pack.id);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pack: pack,
+          perfilId: perfil.id
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.init_point) {
+        window.location.href = data.init_point; // Redirige a Mercado Pago
+      } else {
+        toast.error("Error al conectar con Mercado Pago.");
+        setComprando(null);
+      }
+    } catch (error) {
+      toast.error("Ocurrió un error de conexión.");
+      setComprando(null);
+    }
+  }
+
   if (cargando) return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
 
   return (
@@ -120,10 +176,7 @@ export default function DashboardAlumna() {
       </button>
 
       {menuAbierto && (
-        <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden" 
-          onClick={() => setMenuAbierto(false)}
-        />
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden" onClick={() => setMenuAbierto(false)}/>
       )}
 
       <aside className={`fixed top-0 left-0 h-screen w-64 bg-slate-950 text-slate-50 p-8 flex flex-col z-40 transform transition-transform duration-300 ${menuAbierto ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0 shadow-xl border-r border-border/10`}>
@@ -134,8 +187,7 @@ export default function DashboardAlumna() {
               alt="Logo Alumnas"
               width={90}    
               height={30}    
-              className="object-contain invert"
-              style={{ width: 'auto', height: 'auto' }}
+              className="object-contain w-auto h-auto invert" 
               priority
             />
           </div>
@@ -151,14 +203,20 @@ export default function DashboardAlumna() {
           <button onClick={() => {setSeccionActiva("clases"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "clases" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
             <CalendarDays className="h-5 w-5" /> <span className="font-bold text-sm">Mis Clases</span>
           </button>
-          <button onClick={() => {setSeccionActiva("perfil"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "perfil" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
-            <UserIcon className="h-5 w-5" /> <span className="font-bold text-sm">Mi Perfil</span>
+          
+          {/* NUEVO BOTÓN EN EL MENÚ PARA LA TIENDA */}
+          <button onClick={() => {setSeccionActiva("tienda"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "tienda" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
+            <ShoppingBag className="h-5 w-5" /> <span className="font-bold text-sm">Comprar Clases</span>
+          </button>
+
+          <button onClick={() => {setSeccionActiva("eventos"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "eventos" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
+            <Sparkles className="h-5 w-5" /> <span className="font-bold text-sm">Eventos</span>
           </button>
           <button onClick={() => {setSeccionActiva("pagos"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "pagos" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
             <CreditCard className="h-5 w-5" /> <span className="font-bold text-sm">Mis Pagos</span>
           </button>
-          <button onClick={() => {setSeccionActiva("eventos"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "eventos" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
-            <Sparkles className="h-5 w-5" /> <span className="font-bold text-sm">Eventos</span>
+          <button onClick={() => {setSeccionActiva("perfil"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "perfil" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
+            <UserIcon className="h-5 w-5" /> <span className="font-bold text-sm">Mi Perfil</span>
           </button>
         </nav>
 
@@ -192,7 +250,51 @@ export default function DashboardAlumna() {
           {seccionActiva === "perfil" && <VistaPerfil perfil={perfil} alActualizar={cargarPerfilYReservas} />}
           {seccionActiva === "pagos" && <VistaPagos misPagos={misPagos} />}
           
-          {/* NUEVA VISTA EVENTOS INTERACTIVA */}
+          {/* NUEVA VISTA: TIENDA / COMPRAR CLASES */}
+          {seccionActiva === "tienda" && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <ShoppingBag className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">Comprar Clases</h2>
+                </div>
+                <p className="text-muted-foreground text-sm">Adquirí tus clases de forma rápida y segura a través de Mercado Pago. Los créditos se sumarán automáticamente a tu cuenta.</p>
+              </div>
+
+              {packs.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {packs.map(pack => (
+                    <div key={pack.id} className="bg-card border border-primary/20 rounded-xl overflow-hidden shadow-sm flex flex-col p-6 hover:shadow-md transition-all relative">
+                      <div className="flex-1 text-center">
+                        <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block">
+                        {pack.cantidad_clases === 1 ? 'Clase Suelta' : 'Pack Automático'}
+                        </span>
+                        <h3 className="text-2xl font-black uppercase text-foreground">{pack.nombre}</h3>
+                        <p className="text-4xl font-black text-primary mt-4 mb-2">${pack.precio}</p>
+                        <p className="text-muted-foreground text-sm font-bold">Te carga {pack.cantidad_clases} {pack.cantidad_clases === 1 ? 'crédito' : 'créditos'}</p>
+                      </div>
+                      <div className="pt-6 mt-6 border-t border-border">
+                        <Button 
+                          onClick={() => handleComprarPack(pack)} 
+                          className="w-full font-bold uppercase tracking-widest bg-[#009EE3] hover:bg-[#008CC9] text-white"
+                          disabled={comprando !== null}
+                        >
+                          {comprando === pack.id ? <Loader2 className="h-5 w-5 animate-spin" /> : "Pagar con Mercado Pago"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-xl p-12 shadow-sm text-center">
+                  <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                  <h3 className="text-xl font-bold text-foreground">No hay packs disponibles</h3>
+                  <p className="text-muted-foreground mt-2">En este momento no hay packs a la venta. Consultá con la administración.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {seccionActiva === "eventos" && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
@@ -206,7 +308,6 @@ export default function DashboardAlumna() {
               {(eventosLanding.length > 0 || clasesEventos.length > 0) ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   
-                  {/* Tarjetas de Eventos Landing */}
                   {eventosLanding.map(ev => (
                     <div key={ev.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
                       <div className="h-48 relative bg-slate-100">
@@ -229,7 +330,6 @@ export default function DashboardAlumna() {
                     </div>
                   ))}
 
-                  {/* Tarjetas de Clases Especiales */}
                   {clasesEventos.map(clase => (
                     <div key={clase.id} className="bg-card border border-primary/20 rounded-xl overflow-hidden shadow-sm flex flex-col p-6">
                       <div className="flex-1">

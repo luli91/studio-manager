@@ -60,7 +60,7 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
     try {
       // 1. CARGAMOS LOS PRECIOS DE LA DB
       const { data: configPrecios } = await supabase.from("configuracion").select("valor").eq("key", "precios_packs").single()
-      const PRECIOS = configPrecios?.valor || { 1: 15000, 4: 35000, 8: 52000, 12: 62000, 20: 100000 }
+      const PRECIOS = configPrecios?.valor || { 1: 15000, 4: 35000, 8: 52000, 12: 62000 }
 
       const { data: dbPerfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", alumna.id).single()
       const creditosActuales = Number(dbPerfil?.creditos_clases) || 0
@@ -154,7 +154,6 @@ export default function PerfilAlumnaModal({ alumna, onClose, onUpdate }: { alumn
                   <option value={4}>Pack de 4 clases</option>
                   <option value={8}>Pack de 8 clases</option>
                   <option value={12}>Pack de 12 clases</option>
-                  <option value={20}>Pack libre (20)</option>
                 </select>
                 
                 <div className="flex gap-2">
