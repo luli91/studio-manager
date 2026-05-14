@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
-import { X, UserPlus, Trash2, Loader2, Search, Settings2, Save, Users, Clock, FileText, DollarSign, Sparkles, ListFilter, ReceiptText, CheckCircle } from "lucide-react"
+import { X, UserPlus, Trash2, Loader2, Search, Settings2, Save, Users, Clock, FileText, DollarSign, Sparkles, ListFilter, ReceiptText, CheckCircle, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +19,7 @@ const obtenerDiaSemana = (fechaString: string) => {
 export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clase: any, onClose: () => void, onUpdate: () => void }) {
   const supabase = createClient()
   const [cargando, setCargando] = useState(true)
+  const [subiendo, setSubiendo] = useState(false)
   const [reservas, setReservas] = useState<any[]>([])
   const [alumnas, setAlumnas] = useState<any[]>([])
   const [profesoras, setProfesoras] = useState<any[]>([])
@@ -28,11 +29,19 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
   const [wppEstudio, setWppEstudio] = useState("5491112345678")
 
   const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">(clase.costo_creditos === 0 ? "pesos" : "creditos")
+  
+  // INICIALIZAMOS LOS DATOS CON LA TABLA UNIFICADA
   const [datosClase, setDatosClase] = useState({
-    nivel: clase.nivel, horario: clase.horario, cupo_maximo: clase.cupo_maximo,
-    profesor_id: clase.profesor_id || "", es_evento: clase.es_evento || false,
-    precio: clase.precio || 0, descripcion: clase.descripcion || ""
+    nivel: clase.nivel, 
+    horario: clase.horario, 
+    cupo_maximo: clase.cupo_maximo,
+    profesor_id: clase.profesor_id || "", 
+    es_evento: clase.es_evento || false,
+    precio: clase.precio_evento || clase.precio || "",
+    descripcion: clase.descripcion_evento || clase.descripcion || "",
+    imagen_url: clase.imagen_url || ""
   })
+  
   const [guardandoCambios, setGuardandoCambios] = useState(false)
 
   const [alumnaSeleccionada, setAlumnaSeleccionada] = useState("")
@@ -74,6 +83,23 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
     cargarDatos() 
   }, [clase.id, supabase])
 
+  const subirImagenStorage = async (file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `uploads/${fileName}`
+
+      const { error: uploadError } = await supabase.storage.from('landing').upload(filePath, file)
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('landing').getPublicUrl(filePath)
+      return data.publicUrl
+    } catch (error: any) {
+      toast.error("Error al subir imagen: " + error.message)
+      return null
+    }
+  }
+
   const handleGuardarCambiosClase = async () => {
     if (datosClase.es_evento) {
       if (!datosClase.nivel) return toast.error("Por favor, escribí el nombre del evento especial.");
@@ -90,11 +116,12 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
       const payload = {
         nivel: datosClase.nivel,
         horario: datosClase.horario,
-        cupo_maximo: datosClase.cupo_maximo,
+        cupo_maximo: Number(datosClase.cupo_maximo) || 1,
         profesor_id: datosClase.profesor_id || null,
         es_evento: datosClase.es_evento,
-        descripcion: datosClase.es_evento ? datosClase.descripcion : null,
-        precio: (datosClase.es_evento && formaDePago === "pesos") ? datosClase.precio : null,
+        descripcion_evento: datosClase.es_evento ? datosClase.descripcion : null, // Mapeado para la web
+        imagen_url: datosClase.es_evento ? datosClase.imagen_url : null,          // Mapeado para la web
+        precio_evento: (datosClase.es_evento && formaDePago === "pesos") ? Number(datosClase.precio) : null,
         costo_creditos: (datosClase.es_evento && formaDePago === "pesos") ? 0 : 1,
         grupo_id: datosClase.es_evento ? null : clase.grupo_id 
       }
@@ -116,7 +143,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
     
     const alumna = alumnas.find(a => a.id === alumnaSeleccionada)
     if (!esEventoPago && descontarCredito && alumna?.creditos_clases <= 0) {
-      return toast.error(`${alumna.nombre_completo} no tiene clases disponibles. No podés anotarla descontando crédito.`);
+      return toast.error(`${alumna.nombre_completo} no tiene clases disponibles. No podés anotarla descontando clase.`);
     }
 
     setAgregando(true)
@@ -203,7 +230,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
             <button onClick={onClose} className="hover:bg-background/20 p-2 rounded-full transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
-          <div className="p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-8 custom-scrollbar">
             {cargando ? <div className="col-span-2 flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div> : (
               <>
                 <div className="space-y-6">
@@ -267,10 +294,29 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                       </div>
                       
                       {datosClase.es_evento && (
-                        <div className="space-y-3 animate-in fade-in bg-secondary/30 p-4 rounded-xl border border-border">
+                        <div className="space-y-4 animate-in fade-in bg-secondary/30 p-4 rounded-xl border border-border">
+                          
                           <div className="space-y-1">
-                            <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Descripción (opcional)</Label>
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Descripción para la Web (Opcional)</Label>
                             <Input placeholder="Requisitos, elementos..." value={datosClase.descripcion} onChange={e => setDatosClase({...datosClase, descripcion: e.target.value})} className="bg-background h-10 text-sm border-input focus-visible:ring-ring" />
+                          </div>
+
+                          {/* --- NUEVO SECTOR PARA SUBIR LA FOTO --- */}
+                          <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Foto o Flyer para la Web (Opcional)</Label>
+                            <div className="flex gap-2">
+                                <Input placeholder="URL o subir foto ->" value={datosClase.imagen_url} onChange={(e: any) => setDatosClase({...datosClase, imagen_url: e.target.value})} className="h-10 text-xs bg-background" />
+                                <Label className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center px-4 rounded-md">
+                                    {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                    <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                                      if (!e.target.files?.[0]) return;
+                                      setSubiendo(true);
+                                      const url = await subirImagenStorage(e.target.files[0]);
+                                      if (url) { setDatosClase({...datosClase, imagen_url: url}); toast.success("Flyer listo"); }
+                                      setSubiendo(false);
+                                    }}/>
+                                </Label>
+                            </div>
                           </div>
                           
                           <div className="pt-2">
@@ -286,7 +332,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                               <Label className="flex items-center gap-1 text-[10px] font-bold uppercase"><DollarSign className="h-3 w-3 text-primary"/> Precio de la entrada</Label>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
-                                <Input type="number" min="0" placeholder="Ej: 15000" className="pl-7 bg-background h-10 text-sm border-input focus-visible:ring-ring" value={datosClase.precio} onChange={e => setDatosClase({...datosClase, precio: parseInt(e.target.value) || 0})} />
+                                <Input type="number" min="0" placeholder="Ej: 15000" className="pl-7 bg-background h-10 text-sm border-input focus-visible:ring-ring" value={datosClase.precio} onChange={e => setDatosClase({...datosClase, precio: e.target.value})} />
                               </div>
                             </div>
                           )}
@@ -294,7 +340,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                       )}
                     </div>
 
-                    <Button onClick={handleGuardarCambiosClase} disabled={guardandoCambios} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground transition-colors h-12 rounded-xl font-bold">
+                    <Button onClick={handleGuardarCambiosClase} disabled={guardandoCambios || subiendo} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground transition-colors h-12 rounded-xl font-bold">
                       {guardandoCambios ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />} Guardar cambios
                     </Button>
                   </div>
@@ -310,7 +356,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                     </div>
                     
                     {busquedaAlumna && (
-                      <div className="max-h-36 overflow-y-auto bg-background border border-border rounded-lg shadow-inner">
+                      <div className="max-h-36 overflow-y-auto bg-background border border-border rounded-lg shadow-inner custom-scrollbar">
                         {alumnasFiltradas.length > 0 ? (
                           alumnasFiltradas.map(a => (
                             <div 
@@ -448,7 +494,7 @@ export default function GestionarClaseModal({ clase, onClose, onUpdate }: { clas
                 ) : (
                   <>
                     <h3 className="font-bold text-xl italic tracking-tighter uppercase text-foreground">¿Devolver clase?</h3>
-                    <p className="text-muted-foreground text-sm">¿Querés que recupere el crédito en su cuenta?</p>
+                    <p className="text-muted-foreground text-sm">¿Querés que recupere la clase en su cuenta?</p>
                     <div className="space-y-2">
                       <Button onClick={() => confirmarEliminacion(true)} disabled={eliminando} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase rounded-xl h-12">Sí, devolver 1 clase</Button>
                       <Button onClick={() => confirmarEliminacion(false)} disabled={eliminando} variant="outline" className="w-full border-border text-foreground font-bold hover:bg-accent uppercase rounded-xl h-12">No, solo dar de baja</Button>

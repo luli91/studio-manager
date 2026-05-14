@@ -70,6 +70,8 @@ export default function LandingEditorial() {
   const [eventos, setEventos] = useState<any[]>([])
   const [galeria, setGaleria] = useState<any[]>([])
   const [disciplinas, setDisciplinas] = useState<any[]>([])
+  const [whatsapp, setWhatsapp] = useState("5491141429761")
+
   const [config, setConfig] = useState<any>({
     hero: { foto_portada: "/Florportada.jpeg", frase_streets: "Streets Group" },
     sobreMi: { foto: "/Florportada.jpeg", texto: "" },
@@ -81,8 +83,11 @@ export default function LandingEditorial() {
     window.addEventListener('scroll', handleScroll)
 
     const fetchData = async () => {
+      const hoy = new Date().toISOString().split('T')[0]
+      
       const [resEv, resGal, resDisc, resConf] = await Promise.all([
-        supabase.from("landing_eventos").select("*").eq("activo", true),
+        // BUSCAMOS EN LA TABLA OFICIAL CLASES (Solo Eventos Futuros)
+        supabase.from("clases").select("*").eq("es_evento", true).gte("fecha", hoy).order("fecha", { ascending: true }),
         supabase.from("landing_multimedia").select("*").order("orden"),
         supabase.from("landing_disciplinas").select("*").order("orden"),
         supabase.from("configuracion").select("*")
@@ -102,6 +107,9 @@ export default function LandingEditorial() {
           sobreMi: c.find(x => x.key === 'landing_sobre_mi')?.valor || config.sobreMi,
           spotify: spot
         })
+
+        const tel = c.find(x => x.key === 'reglas')?.valor?.whatsapp_estudio;
+        if (tel) setWhatsapp(tel);
       }
     }
     fetchData()
@@ -211,21 +219,47 @@ export default function LandingEditorial() {
         <section id="eventos" className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-16"><h2 className="text-5xl font-black uppercase italic">Próximos Eventos</h2></div>
           <div className="space-y-10">
-            {eventos.map(ev => (
+            {eventos.map(ev => {
+              // Verificamos de qué tipo es (Pago Aparte vs Crédito)
+              const precioReal = ev.precio || ev.precio_evento || 0;
+              const esEventoPago = ev.costo_creditos === 0 && precioReal > 0;
+
+              return (
               <div key={ev.id} className="relative bg-slate-900 text-white flex flex-col md:flex-row group overflow-hidden">
-                <div className="md:w-1/2 h-72 md:h-auto overflow-hidden">
-                  <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 grayscale group-hover:grayscale-0" />
+                <div className="md:w-1/2 h-72 md:h-auto overflow-hidden bg-slate-800 flex items-center justify-center">
+                  {ev.imagen_url ? (
+                    <img src={ev.imagen_url} alt={ev.nivel} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 grayscale group-hover:grayscale-0" />
+                  ) : (
+                    <Calendar className="w-20 h-20 text-white/10" />
+                  )}
                 </div>
                 <div className="md:w-1/2 p-10 md:p-16 flex flex-col justify-center space-y-6">
-                  <h3 className="text-4xl font-black uppercase">{ev.titulo}</h3>
-                  <p className="text-slate-400 text-lg">{ev.descripcion}</p>
-                  <div className="pt-8 border-t border-white/10 flex justify-between items-center">
-                    <p className="text-5xl font-black tracking-tighter">${ev.precio}</p>
-                    <Link href="/registro"><Button className="rounded-none bg-white text-slate-900 px-10 h-16 font-black uppercase">Inscribirme</Button></Link>
+                  <h3 className="text-4xl font-black uppercase">{ev.nivel}</h3>
+                  <p className="text-slate-400 text-lg leading-relaxed">{ev.descripcion_evento || "Evento especial del estudio."}</p>
+                  
+                  <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-6">
+                    <div>
+                        <p className="text-5xl font-black tracking-tighter">
+                          {esEventoPago ? `$${precioReal}` : "1 Crédito"}
+                        </p>
+                        <p className="text-slate-500 uppercase tracking-widest text-[10px] font-bold mt-2">
+                           Fecha: {ev.fecha.split('-').reverse().join('/')} a las {ev.horario.slice(0,5)}hs
+                        </p>
+                    </div>
+                    
+                    <Button 
+                      onClick={() => {
+                        const msj = `Hola Flor! Quiero reservar mi lugar en el evento ${ev.nivel} del día ${ev.fecha.split('-').reverse().join('/')}.`;
+                        window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msj)}`, '_blank');
+                      }}
+                      className="rounded-none bg-white text-slate-900 hover:bg-slate-200 px-10 h-16 font-black uppercase w-full sm:w-auto"
+                    >
+                      Consultar
+                    </Button>
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </section>
       )}
@@ -254,12 +288,12 @@ export default function LandingEditorial() {
             <h4 className="font-black uppercase text-xs tracking-widest border-b pb-2 inline-block">Contacto</h4>
             <div className="space-y-3 pt-2 flex flex-col items-center md:items-start text-slate-500 font-bold text-sm">
               <a href="https://instagram.com/polekitty__/" target="_blank" className="hover:text-slate-900 transition-colors italic">@polekitty__</a>
-              <a href="https://wa.me/5491141429761" target="_blank" className="hover:text-slate-900 transition-colors italic">WhatsApp</a>
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" className="hover:text-slate-900 transition-colors italic">WhatsApp</a>
               <p>Pedernera 1103</p>
             </div>
           </div>
           <div className="flex flex-col items-center md:items-end justify-between">
-             <Link href="/login"><Button variant="outline" className="rounded-none border-slate-900 text-slate-900 font-black uppercase px-8">Staff / Alumnas</Button></Link>
+             <Link href="/login"><Button variant="outline" className="rounded-none border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white font-black uppercase px-8">Staff / Alumnas</Button></Link>
              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-4">© 2026 PoleKitty Studio.</p>
           </div>
         </div>

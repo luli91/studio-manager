@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
-import { Save, Loader2, Plus, Trash2, Music, User, Star, Layout, Camera, Upload } from "lucide-react"
+import { Save, Loader2, Trash2, Music, User, Star, Layout, Camera, Upload, AlertCircle, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
 
 export default function MultimediaPage() {
   const supabase = createClient()
@@ -17,28 +19,25 @@ export default function MultimediaPage() {
   const [guardando, setGuardando] = useState(false)
   const [subiendo, setSubiendo] = useState(false)
 
-  // ESTADOS DE LA LANDING
   const [hero, setHero] = useState<any>({})
   const [sobreMi, setSobreMi] = useState<any>({})
-  
-  // NUEVO ESTADO PARA SPOTIFY (Múltiples canciones)
   const [spotify, setSpotify] = useState<{ canciones: string[] }>({ canciones: [] })
   const [nuevaCancion, setNuevaCancion] = useState("")
 
   const [disciplinas, setDisciplinas] = useState<any[]>([])
-  const [eventos, setEventos] = useState<any[]>([])
+  const [eventos, setEventos] = useState<any[]>([]) 
   const [galeria, setGaleria] = useState<any[]>([])
 
-  // ESTADOS PARA CREACIÓN (Formularios de arriba)
   const [nuevaDisciplina, setNuevaDisciplina] = useState({ titulo: "", descripcion: "", imagen_url: "" })
-  const [nuevoEvento, setNuevoEvento] = useState({ titulo: "", descripcion: "", precio: "", imagen_url: "", activo: true })
 
   const cargarTodo = async () => {
     setCargando(true)
+    const hoy = new Date().toISOString().split('T')[0]
+
     const [resConfig, resDisc, resEv, resGal] = await Promise.all([
       supabase.from("configuracion").select("*"),
       supabase.from("landing_disciplinas").select("*").order("orden"),
-      supabase.from("landing_eventos").select("*").order("created_at"),
+      supabase.from("clases").select("*").eq("es_evento", true).gte("fecha", hoy).order("fecha"),
       supabase.from("landing_multimedia").select("*").order("orden")
     ])
 
@@ -47,16 +46,15 @@ export default function MultimediaPage() {
       setHero(config.find(c => c.key === 'landing_hero')?.valor || { foto_portada: "", frase_streets: "" })
       setSobreMi(config.find(c => c.key === 'landing_sobre_mi')?.valor || { foto: "", texto: "" })
       
-      // Adaptar la música vieja al nuevo formato de lista
       const spotData = config.find(c => c.key === 'landing_spotify')?.valor || { canciones: [] };
       if (spotData.url && !spotData.canciones) {
-          setSpotify({ canciones: [spotData.url] }); // Si había un link viejo, lo mete en la lista
+          setSpotify({ canciones: [spotData.url] }); 
       } else {
           setSpotify(spotData.canciones ? spotData : { canciones: [] });
       }
     }
     if (resDisc.data) setDisciplinas(resDisc.data)
-    if (resEv.data) setEventos(resEv.data)
+    if (resEv.data) setEventos(resEv.data) 
     if (resGal.data) setGaleria(resGal.data)
     setCargando(false)
   }
@@ -105,23 +103,6 @@ export default function MultimediaPage() {
     setDisciplinas(disciplinas.filter(d => d.id !== id))
   }
 
-  const crearEvento = async () => {
-    if (!nuevoEvento.titulo) return toast.error("Escribí un título para el evento.")
-    setGuardando(true)
-    const { data } = await supabase.from("landing_eventos").insert([nuevoEvento]).select()
-    if (data) {
-      setEventos([...eventos, data[0]])
-      setNuevoEvento({ titulo: "", descripcion: "", precio: "", imagen_url: "", activo: true })
-      toast.success("¡Evento agregado con éxito!")
-    }
-    setGuardando(false)
-  }
-
-  const eliminarEvento = async (id: string) => {
-    await supabase.from("landing_eventos").delete().eq("id", id)
-    setEventos(eventos.filter(e => e.id !== id))
-  }
-
   const handleGaleriaUpload = async (e: any) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -137,7 +118,6 @@ export default function MultimediaPage() {
     setSubiendo(false)
   }
 
-  // --- MÚSICA ---
   const agregarCancion = () => {
     if (!nuevaCancion) return toast.error("Pegá un enlace válido.");
     if (spotify.canciones.length >= 10) return toast.error("Máximo 10 canciones permitidas.");
@@ -178,7 +158,7 @@ export default function MultimediaPage() {
                 <div className="flex gap-2">
                   <Input placeholder="https://..." value={hero.foto_portada} onChange={(e: any) => setHero({...hero, foto_portada: e.target.value})} className="flex-1" />
                   <Label className="cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 flex items-center justify-center px-4 rounded-md font-bold text-xs uppercase tracking-widest">
-                    {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Upload className="w-4 h-4 mr-2" /> Subir Foto</>}
+                    {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <span><Upload className="w-4 h-4 mr-2 inline-block" /> Subir Foto</span>}
                     <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                       if (!e.target.files?.[0]) return;
                       setSubiendo(true);
@@ -315,7 +295,7 @@ export default function MultimediaPage() {
                 <div className="flex gap-2">
                   <Input value={sobreMi.foto} onChange={(e: any) => setSobreMi({...sobreMi, foto: e.target.value})} className="flex-1" />
                   <Label className="cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 flex items-center justify-center px-4 rounded-md font-bold text-xs uppercase tracking-widest">
-                    {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Upload className="w-4 h-4 mr-2" /> Subir Foto</>}
+                    {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <span><Upload className="w-4 h-4 mr-2 inline-block" /> Subir Foto</span>}
                     <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                       if (!e.target.files?.[0]) return;
                       setSubiendo(true);
@@ -337,77 +317,87 @@ export default function MultimediaPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="eventos" className="pt-6 space-y-10">
-          <div className="bg-muted/50 border border-border p-6 rounded-xl space-y-4">
-            <h3 className="font-black uppercase tracking-widest flex items-center"><Plus className="w-5 h-5 mr-2 text-primary" /> Agregar Nuevo Evento</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                    <div className="space-y-2"><Label>Título del Evento</Label><Input value={nuevoEvento.titulo} onChange={(e: any) => setNuevoEvento({...nuevoEvento, titulo: e.target.value})} /></div>
-                    <div className="space-y-2"><Label>Precio de la entrada</Label><Input value={nuevoEvento.precio} onChange={(e: any) => setNuevoEvento({...nuevoEvento, precio: e.target.value})} /></div>
-                    <div className="space-y-2">
-                        <Label>Foto/Flyer del Evento</Label>
-                        <div className="flex gap-2">
-                            <Input value={nuevoEvento.imagen_url} onChange={(e: any) => setNuevoEvento({...nuevoEvento, imagen_url: e.target.value})} className="flex-1" />
-                            <Label className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center px-4 rounded-md">
-                                {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
-                                if (!e.target.files?.[0]) return;
-                                setSubiendo(true);
-                                const url = await subirImagenStorage(e.target.files[0]);
-                                if (url) { setNuevoEvento({...nuevoEvento, imagen_url: url}); toast.success("Flyer cargado listo para agregar"); }
-                                setSubiendo(false);
-                                }}/>
-                            </Label>
-                        </div>
-                    </div>
-                </div>
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label>Descripción del evento</Label>
-                        <Textarea className="h-[120px]" value={nuevoEvento.descripcion} onChange={(e: any) => setNuevoEvento({...nuevoEvento, descripcion: e.target.value})} />
-                    </div>
-                    <Button onClick={crearEvento} disabled={guardando || subiendo} className="w-full font-bold uppercase tracking-widest h-12">Crear Evento</Button>
-                </div>
+        {/* --- EVENTOS UNIFICADOS --- */}
+        <TabsContent value="eventos" className="pt-6 space-y-6">
+          <div className="bg-primary/10 border border-primary/20 p-4 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-primary shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-primary uppercase tracking-widest text-sm">¿Cómo crear un evento?</h4>
+              <p className="text-sm text-muted-foreground mt-1">Los eventos ahora se crean directamente desde la <strong>Grilla de Clases</strong> marcando la opción "Es Evento". Una vez creados allá, aparecerán automáticamente en esta lista para que puedas editar su título, agregarles una foto o establecer un precio.</p>
             </div>
           </div>
-          <div className="h-px bg-border w-full"></div>
+
           <div>
-            <h3 className="font-black uppercase tracking-widest mb-6">Eventos Creados</h3>
-            <div className="space-y-6">
-                {eventos.map((ev) => (
-                <Card key={ev.id} className="border-border bg-card p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                        <div className="space-y-2"><Label>Título</Label><Input value={ev.titulo} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).titulo = e.target.value; setEventos(n); }}/></div>
-                        <div className="space-y-2"><Label>Precio</Label><Input value={ev.precio} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).precio = e.target.value; setEventos(n); }}/></div>
-                        <div className="space-y-2">
-                        <Label>Imagen URL</Label>
-                        <div className="flex gap-2">
-                            <Input value={ev.imagen_url} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).imagen_url = e.target.value; setEventos(n); }} className="flex-1 text-xs" />
-                            <Label className="cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 flex items-center justify-center px-3 rounded-md">
-                            {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                            <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
-                                if (!e.target.files?.[0]) return;
-                                setSubiendo(true);
-                                const url = await subirImagenStorage(e.target.files[0]);
-                                if (url) { const n = [...eventos]; n.find(x => x.id === ev.id).imagen_url = url; setEventos(n); toast.success("Flyer nuevo listo, click en Guardar"); }
-                                setSubiendo(false);
-                            }}/>
-                            </Label>
+            <h3 className="font-black uppercase tracking-widest mb-6">Modificar Eventos de la Grilla</h3>
+            
+            {eventos.length === 0 ? (
+               <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-dashed border-border">
+                  <p>No hay clases marcadas como evento a partir de hoy.</p>
+               </div>
+            ) : (
+                <div className="space-y-6">
+                    {eventos.map((ev) => (
+                    <Card key={ev.id} className="border-border bg-card p-6 shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Título del Evento (Cambia en toda la web)</Label>
+                                <Input value={ev.nivel} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).nivel = e.target.value; setEventos(n); }} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-2">
+                                    <Label>Fecha</Label>
+                                    <Input value={format(parseISO(ev.fecha), 'dd/MM/yyyy')} disabled className="bg-muted" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Precio (Si se cobra aparte)</Label>
+                                    <Input type="number" placeholder="Ej: 8000" value={ev.precio_evento || ""} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).precio_evento = e.target.value; setEventos(n); }}/>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                            <Label>Flyer / Foto para la Web</Label>
+                            <div className="flex gap-2">
+                                <Input value={ev.imagen_url || ""} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).imagen_url = e.target.value; setEventos(n); }} className="flex-1 text-xs" />
+                                <Label className="cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 flex items-center justify-center px-3 rounded-md">
+                                {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                                    if (!e.target.files?.[0]) return;
+                                    setSubiendo(true);
+                                    const url = await subirImagenStorage(e.target.files[0]);
+                                    if (url) { const n = [...eventos]; n.find(x => x.id === ev.id).imagen_url = url; setEventos(n); toast.success("Flyer listo, click en Guardar"); }
+                                    setSubiendo(false);
+                                }}/>
+                                </Label>
+                            </div>
+                            </div>
+                        </div>
+                        <div className="space-y-4 flex flex-col">
+                            <div className="space-y-2"><Label>Descripción para la Web</Label><Textarea className="h-[120px]" value={ev.descripcion_evento || ""} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).descripcion_evento = e.target.value; setEventos(n); }}/></div>
+                            <div className="flex gap-2 mt-auto">
+                            <Button 
+                                className="w-full font-bold" 
+                                disabled={subiendo} 
+                                onClick={async () => {
+                                    const { error } = await supabase.from("clases").update({ 
+                                        nivel: ev.nivel, // Esto actualiza el título en la grilla y la landing a la vez
+                                        imagen_url: ev.imagen_url, 
+                                        descripcion_evento: ev.descripcion_evento,
+                                        precio_evento: ev.precio_evento ? Number(ev.precio_evento) : null
+                                    }).eq("id", ev.id);
+                                    
+                                    if(error) toast.error("Error al guardar");
+                                    else toast.success("Evento actualizado en toda la web");
+                                }}
+                            >
+                                Guardar Todos los Cambios
+                            </Button>
+                            </div>
                         </div>
                         </div>
-                    </div>
-                    <div className="space-y-4 flex flex-col">
-                        <div className="space-y-2"><Label>Descripción</Label><Textarea className="h-[120px]" value={ev.descripcion} onChange={(e: any) => { const n = [...eventos]; n.find(x => x.id === ev.id).descripcion = e.target.value; setEventos(n); }}/></div>
-                        <div className="flex gap-2 mt-auto">
-                        <Button variant="outline" className="flex-1 font-bold" disabled={subiendo} onClick={() => supabase.from("landing_eventos").upsert(ev).then(() => toast.success("Evento actualizado"))}>Guardar Cambios</Button>
-                        <Button variant="destructive" size="icon" onClick={() => eliminarEvento(ev.id)}><Trash2 className="w-4 h-4"/></Button>
-                        </div>
-                    </div>
-                    </div>
-                </Card>
-                ))}
-            </div>
+                    </Card>
+                    ))}
+                </div>
+            )}
           </div>
         </TabsContent>
 

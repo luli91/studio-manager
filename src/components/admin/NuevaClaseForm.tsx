@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Calendar as CalendarIcon, Clock, Users, FileText, DollarSign, Repeat, GraduationCap, Sparkles, Loader2, ListFilter } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, FileText, DollarSign, Repeat, GraduationCap, Sparkles, Loader2, ListFilter, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 
 const obtenerDiaSemana = (fechaString: string) => {
   const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -19,9 +20,9 @@ const obtenerDiaSemana = (fechaString: string) => {
 export default function NuevaClaseForm({ onCertado }: { onCertado: () => void }) {
   const supabase = createClient()
   const [cargando, setCargando] = useState(false)
+  const [subiendo, setSubiendo] = useState(false)
   const [profesoras, setProfesoras] = useState<any[]>([])
   
-  // CRONOGRAMA DINÁMICO
   const [cronogramaFull, setCronogramaFull] = useState<any>({})
 
   const [repetir, setRepetir] = useState(false)
@@ -29,7 +30,9 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
   const [formaDePago, setFormaDePago] = useState<"creditos" | "pesos">("creditos")
 
   const [clase, setClase] = useState({
-    fecha: "", horario: "", nivel: "", cupo_maximo: 10, es_evento: false, precio: 0, descripcion: "", profesor_id: ""
+    fecha: "", horario: "", nivel: "", cupo_maximo: 10, es_evento: false, precio: "", descripcion: "", profesor_id: "",
+    // Nuevos campos para eventos web
+    imagen_url: "", descripcion_evento: ""
   })
 
   const diaDeLaSemana = clase.fecha ? obtenerDiaSemana(clase.fecha) : "";
@@ -45,6 +48,23 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
     };
     cargarTodo();
   }, []);
+
+  const subirImagenStorage = async (file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `uploads/${fileName}`
+
+      const { error: uploadError } = await supabase.storage.from('landing').upload(filePath, file)
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('landing').getPublicUrl(filePath)
+      return data.publicUrl
+    } catch (error: any) {
+      toast.error("Error al subir imagen: " + error.message)
+      return null
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,11 +87,12 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
           nivel: clase.nivel,
           fecha: dateStr, 
           horario: clase.horario, 
-          cupo_maximo: clase.cupo_maximo,
+          cupo_maximo: Number(clase.cupo_maximo) || 1,
           es_evento: clase.es_evento,
           costo_creditos: (clase.es_evento && formaDePago === "pesos") ? 0 : 1,
-          precio: (clase.es_evento && formaDePago === "pesos") ? clase.precio : null,
-          descripcion: clase.es_evento ? clase.descripcion : null,
+          precio_evento: (clase.es_evento && formaDePago === "pesos") ? Number(clase.precio) : null,
+          descripcion_evento: clase.es_evento ? clase.descripcion_evento : null, // Info web
+          imagen_url: clase.es_evento ? clase.imagen_url : null, // Flyer web
           dia_semana: obtenerDiaSemana(dateStr),
           grupo_id: grupoId,
           profesor_id: clase.profesor_id || null
@@ -95,7 +116,7 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
       <div className="p-4 bg-secondary/50 rounded-2xl border border-border flex items-center justify-between shadow-inner">
         <div className="space-y-0.5">
           <Label className="text-foreground font-bold flex items-center gap-2 leading-none cursor-pointer"><Sparkles className="h-4 w-4 text-primary"/> ¿Es un Evento Especial?</Label>
-          <p className="text-[10px] text-muted-foreground font-medium">Workshops, clases libres o seminarios.</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Aparecerá en la sección Eventos de la web.</p>
         </div>
         <Switch checked={clase.es_evento} onCheckedChange={c => { setClase({...clase, es_evento: c, nivel: "", horario: ""}); }} />
       </div>
@@ -134,35 +155,56 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
         )}
       </div>
 
+      {/* --- SECCIÓN EXCLUSIVA PARA EVENTOS WEB --- */}
       {clase.es_evento && (
         <div className="space-y-4 p-5 bg-secondary/30 border border-border rounded-2xl animate-in slide-in-from-right-2">
            <div className="grid grid-cols-2 gap-3">
              <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Nombre</Label>
-                <Input placeholder="Ej: Workshop..." required value={clase.nivel} onChange={e => setClase({...clase, nivel: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Título Público</Label>
+                <Input placeholder="Ej: Workshop Pole..." required value={clase.nivel} onChange={e => setClase({...clase, nivel: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
              </div>
              <div className="space-y-1">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Horario</Label>
                 <Input type="time" required value={clase.horario} onChange={e => setClase({...clase, horario: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
              </div>
            </div>
+           
            <div className="space-y-1">
-              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Descripción (opcional)</Label>
-              <Input placeholder="Requisitos, elementos..." value={clase.descripcion} onChange={e => setClase({...clase, descripcion: e.target.value})} className="bg-background h-12 border-input focus-visible:ring-ring" />
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Foto o Flyer (Opcional)</Label>
+              <div className="flex gap-2">
+                  <Input placeholder="URL o subir foto ->" value={clase.imagen_url} onChange={(e: any) => setClase({...clase, imagen_url: e.target.value})} className="h-10 text-xs bg-background" />
+                  <Label className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center px-4 rounded-md">
+                      {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                      if (!e.target.files?.[0]) return;
+                      setSubiendo(true);
+                      const url = await subirImagenStorage(e.target.files[0]);
+                      if (url) { setClase({...clase, imagen_url: url}); toast.success("Flyer listo"); }
+                      setSubiendo(false);
+                      }}/>
+                  </Label>
+              </div>
            </div>
-           <div className="pt-2">
-             <Label className="text-xs font-bold text-foreground mb-2 block">Método de cobro:</Label>
+
+           <div className="space-y-1">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Descripción para la Web</Label>
+              <Textarea placeholder="Temario, requisitos..." value={clase.descripcion_evento} onChange={e => setClase({...clase, descripcion_evento: e.target.value})} className="bg-background border-input focus-visible:ring-ring h-20" />
+           </div>
+
+           <div className="pt-2 border-t border-border">
+             <Label className="text-xs font-bold text-foreground mb-2 block">¿Cómo lo abonan las alumnas?</Label>
              <div className="grid grid-cols-2 gap-3">
-               <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Descuenta clase</button>
-               <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Se paga aparte</button>
+               <button type="button" onClick={() => setFormaDePago("creditos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "creditos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Resta 1 Clase</button>
+               <button type="button" onClick={() => setFormaDePago("pesos")} className={`p-3 text-sm font-semibold rounded-xl border-2 transition-all ${formaDePago === "pesos" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-background text-muted-foreground border-border hover:border-muted-foreground/30"}`}>Pago Aparte ($)</button>
              </div>
            </div>
+
            {formaDePago === "pesos" && (
              <div className="space-y-2 pt-2 animate-in fade-in">
-               <Label className="flex items-center gap-2 text-[10px] font-bold uppercase"><DollarSign className="h-4 w-4 text-primary"/> Precio de la entrada</Label>
+               <Label className="flex items-center gap-2 text-[10px] font-bold uppercase"><DollarSign className="h-4 w-4 text-primary"/> Precio a cobrar en Mercado Pago</Label>
                <div className="relative">
                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
-                 <Input type="number" min="0" className="pl-8 h-12 bg-background border-input focus-visible:ring-ring" placeholder="Ej: 15000" required value={clase.precio} onChange={e => setClase({...clase, precio: parseInt(e.target.value) || 0})} />
+                 <Input type="number" min="0" className="pl-8 h-12 bg-background border-input focus-visible:ring-ring text-lg font-black" placeholder="Ej: 15000" required value={clase.precio} onChange={e => setClase({...clase, precio: e.target.value})} />
                </div>
              </div>
            )}
@@ -200,7 +242,7 @@ export default function NuevaClaseForm({ onCertado }: { onCertado: () => void })
 
       <div className="flex gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCertado} className="rounded-2xl text-foreground font-bold uppercase tracking-widest text-xs h-14 px-8 border-border hover:bg-accent">Cancelar</Button>
-        <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-tighter italic h-14 text-lg shadow-lg active:scale-95 transition-all" disabled={cargando}>
+        <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-tighter italic h-14 text-lg shadow-lg active:scale-95 transition-all" disabled={cargando || subiendo}>
           {cargando ? <Loader2 className="animate-spin h-6 w-6" /> : "Crear en Calendario"}
         </Button>
       </div>

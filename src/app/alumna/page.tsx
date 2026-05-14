@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
 import { Loader2, CalendarDays, User as UserIcon, CreditCard, Sparkles, LogOut, CheckCircle2, Menu, X, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { format, parseISO } from "date-fns"
 
 import VistaClases from "@/components/alumnas/VistaClases"
 import VistaPerfil from "@/components/alumnas/VistaPerfil"
@@ -19,12 +20,13 @@ export default function DashboardAlumna() {
   const [perfil, setPerfil] = useState<any>(null)
   const [misReservas, setMisReservas] = useState<any[]>([])
   const [misPagos, setMisPagos] = useState<any[]>([])
-  const [eventosLanding, setEventosLanding] = useState<any[]>([])
-  const [clasesEventos, setClasesEventos] = useState<any[]>([])
   
-  // NUEVO: Estados para los Packs de Mercado Pago
+  // NUEVO: Array único de Eventos
+  const [eventos, setEventos] = useState<any[]>([])
+  
   const [packs, setPacks] = useState<any[]>([])
   const [comprando, setComprando] = useState<string | null>(null)
+  const [procesandoEvento, setProcesandoEvento] = useState<string | null>(null)
 
   const [horasCancelacion, setHorasCancelacion] = useState<number>(5) 
   const [procesandoCancelacion, setProcesandoCancelacion] = useState<string | null>(null)
@@ -32,14 +34,12 @@ export default function DashboardAlumna() {
   const [seccionActiva, setSeccionActiva] = useState("clases")
   const [menuAbierto, setMenuAbierto] = useState(false)
 
-  // NUEVO: Detectar si viene de pagar con éxito en Mercado Pago
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const pagoStatus = urlParams.get('pago');
     
     if (pagoStatus === 'exitoso') {
-      toast.success("¡Pago exitoso! Tus nuevas clases ya están acreditadas.");
-      // Limpiamos la URL para que no vuelva a saltar el cartel al refrescar
+      toast.success("¡Pago exitoso! La operación ya está acreditada.");
       window.history.replaceState(null, '', window.location.pathname);
     } else if (pagoStatus === 'error') {
       toast.error("Hubo un problema con el pago en Mercado Pago. Intentá nuevamente.");
@@ -55,6 +55,8 @@ export default function DashboardAlumna() {
     if (dataPerfil) setPerfil(dataPerfil)
 
     const hoy = new Date().toISOString().split('T')[0]
+    
+    // 1. Cargamos Reservas Activas
     const { data: dataReservas } = await supabase
       .from("reservas")
       .select(`id, estado, fecha_clase, clases (nivel, horario, dia_semana, es_evento, costo_creditos)`)
@@ -65,6 +67,7 @@ export default function DashboardAlumna() {
 
     if (dataReservas) setMisReservas(dataReservas)
 
+    // 2. Cargamos Historial de Pagos
     const { data: dataPagos } = await supabase
       .from("pagos")
       .select("*")
@@ -73,13 +76,22 @@ export default function DashboardAlumna() {
 
     if (dataPagos) setMisPagos(dataPagos)
 
-    const { data: dataEventos } = await supabase.from("landing_eventos").select("*").eq("activo", true)
-    if (dataEventos) setEventosLanding(dataEventos)
+    // 3. Cargamos los Eventos Oficiales de la Grilla
+    const { data: dataEventos } = await supabase
+      .from("clases")
+      .select(`*, reservas (id, perfil_id, estado)`)
+      .eq("es_evento", true)
+      .gte("fecha", hoy)
+      .order("fecha", { ascending: true })
 
-    const { data: dataClasesEventos } = await supabase.from("clases").select("*").eq("es_evento", true)
-    if (dataClasesEventos) setClasesEventos(dataClasesEventos)
+    if (dataEventos) {
+      setEventos(dataEventos.map(ev => ({
+        ...ev,
+        reservas_confirmadas: ev.reservas?.filter((r: any) => r.estado === 'confirmada') || []
+      })))
+    }
 
-    // NUEVO: Leemos los precios desde la configuración de Flor
+    // 4. Cargamos Precios de Packs
     const { data: configPrecios } = await supabase.from("configuracion").select("valor").eq("key", "precios_packs").single()
     if (configPrecios && configPrecios.valor) {
       const packsFormateados = Object.entries(configPrecios.valor)
@@ -90,10 +102,10 @@ export default function DashboardAlumna() {
           precio: Number(precio)
         }))
         .sort((a, b) => a.cantidad_clases - b.cantidad_clases); 
-      
       setPacks(packsFormateados);
     }
 
+    // 5. Configuración de Cancelación
     const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "reglas").single()
     if (config?.valor?.horas_cancelacion) setHorasCancelacion(config.valor.horas_cancelacion)
 
@@ -136,30 +148,59 @@ export default function DashboardAlumna() {
     }
   }
 
-  // NUEVO: Función para generar el link de pago y redirigir
+  // --- FUNCIONES DE PAGOS Y RESERVAS DE EVENTOS ---
+  
   const handleComprarPack = async (pack: any) => {
     setComprando(pack.id);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pack: pack,
-          perfilId: perfil.id
-        }),
+        // Le avisamos al checkout que es un PACK
+        body: JSON.stringify({ tipo: "pack", pack: pack, perfilId: perfil.id }),
       });
-      
       const data = await res.json();
+      if (data.init_point) window.location.href = data.init_point; 
+      else toast.error("Error al conectar con Mercado Pago.");
+    } catch (error) { toast.error("Ocurrió un error de conexión."); } 
+    finally { setComprando(null); }
+  }
+
+  const handlePagarEventoMP = async (evento: any) => {
+    setComprando(evento.id);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Le avisamos al checkout que es un EVENTO
+        body: JSON.stringify({ tipo: "evento", evento: evento, perfilId: perfil.id }),
+      });
+      const data = await res.json();
+      if (data.init_point) window.location.href = data.init_point;
+      else toast.error("Error al conectar con Mercado Pago.");
+    } catch (error) { toast.error("Ocurrió un error de conexión."); } 
+    finally { setComprando(null); }
+  }
+
+  const handleAnotarseEventoConCredito = async (evento: any) => {
+    setProcesandoEvento(evento.id)
+    try {
+      if (perfil.creditos_clases < evento.costo_creditos) throw new Error("No tenés suficientes clases en tu pack.")
       
-      if (data.init_point) {
-        window.location.href = data.init_point; // Redirige a Mercado Pago
-      } else {
-        toast.error("Error al conectar con Mercado Pago.");
-        setComprando(null);
-      }
-    } catch (error) {
-      toast.error("Ocurrió un error de conexión.");
-      setComprando(null);
+      const { error: errReserva } = await supabase.from('reservas').upsert({
+        perfil_id: perfil.id, clase_id: evento.id, fecha_clase: evento.fecha, estado: 'confirmada'
+      }, { onConflict: 'perfil_id,clase_id,fecha_clase' })
+      if (errReserva) throw errReserva
+
+      const { error: errPerfil } = await supabase.from('perfiles').update({ creditos_clases: perfil.creditos_clases - evento.costo_creditos }).eq('id', perfil.id)
+      if (errPerfil) throw errPerfil
+
+      toast.success("¡Lugar asegurado con éxito! 🎉")
+      await cargarPerfilYReservas()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setProcesandoEvento(null)
     }
   }
 
@@ -183,12 +224,7 @@ export default function DashboardAlumna() {
         <div className="mb-10 flex flex-col items-center text-center">
           <div className="mb-1 block"> 
             <Image 
-              src="/LOGO-POLEKITTY-Flor.png" 
-              alt="Logo Alumnas"
-              width={90}    
-              height={30}    
-              className="object-contain w-auto h-auto invert" 
-              priority
+              src="/LOGO-POLEKITTY-Flor.png" alt="Logo Alumnas" width={90} height={30} className="object-contain w-auto h-auto invert" priority
             />
           </div>
           <h2 className="text-xl font-black tracking-tight text-white leading-none uppercase mt-3">
@@ -204,7 +240,6 @@ export default function DashboardAlumna() {
             <CalendarDays className="h-5 w-5" /> <span className="font-bold text-sm">Mis Clases</span>
           </button>
           
-          {/* NUEVO BOTÓN EN EL MENÚ PARA LA TIENDA */}
           <button onClick={() => {setSeccionActiva("tienda"); setMenuAbierto(false)}} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${seccionActiva === "tienda" ? "bg-primary shadow-lg text-primary-foreground" : "hover:bg-white/5 text-slate-400 hover:text-white"}`}>
             <ShoppingBag className="h-5 w-5" /> <span className="font-bold text-sm">Comprar Clases</span>
           </button>
@@ -250,7 +285,6 @@ export default function DashboardAlumna() {
           {seccionActiva === "perfil" && <VistaPerfil perfil={perfil} alActualizar={cargarPerfilYReservas} />}
           {seccionActiva === "pagos" && <VistaPagos misPagos={misPagos} />}
           
-          {/* NUEVA VISTA: TIENDA / COMPRAR CLASES */}
           {seccionActiva === "tienda" && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
@@ -258,7 +292,7 @@ export default function DashboardAlumna() {
                   <ShoppingBag className="h-6 w-6 text-primary" />
                   <h2 className="text-xl font-bold text-foreground">Comprar Clases</h2>
                 </div>
-                <p className="text-muted-foreground text-sm">Adquirí tus clases de forma rápida y segura a través de Mercado Pago. Los créditos se sumarán automáticamente a tu cuenta.</p>
+                <p className="text-muted-foreground text-sm">Adquirí tus clases de forma rápida y segura a través de Mercado Pago. Las clases se sumarán automáticamente a tu cuenta.</p>
               </div>
 
               {packs.length > 0 ? (
@@ -271,7 +305,7 @@ export default function DashboardAlumna() {
                         </span>
                         <h3 className="text-2xl font-black uppercase text-foreground">{pack.nombre}</h3>
                         <p className="text-4xl font-black text-primary mt-4 mb-2">${pack.precio}</p>
-                        <p className="text-muted-foreground text-sm font-bold">Te carga {pack.cantidad_clases} {pack.cantidad_clases === 1 ? 'crédito' : 'créditos'}</p>
+                        <p className="text-muted-foreground text-sm font-bold">Te carga {pack.cantidad_clases} {pack.cantidad_clases === 1 ? 'clase' : 'clases'}</p>
                       </div>
                       <div className="pt-6 mt-6 border-t border-border">
                         <Button 
@@ -302,50 +336,65 @@ export default function DashboardAlumna() {
                   <Sparkles className="h-6 w-6 text-primary" />
                   <h2 className="text-xl font-bold text-foreground">Próximos Eventos y Masterclasses</h2>
                 </div>
-                <p className="text-muted-foreground text-sm">Descubrí las clases especiales y eventos que tenemos preparados en el estudio.</p>
+                <p className="text-muted-foreground text-sm">Inscribite directamente desde acá pagando con Mercado Pago o utilizando tus clases disponibles.</p>
               </div>
 
-              {(eventosLanding.length > 0 || clasesEventos.length > 0) ? (
+              {eventos.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
-                  {eventosLanding.map(ev => (
-                    <div key={ev.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
-                      <div className="h-48 relative bg-slate-100">
-                        {ev.imagen_url ? (
-                          <img src={ev.imagen_url} alt={ev.titulo} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                            <CalendarDays className="h-10 w-10 opacity-30" />
+                  {eventos.map(ev => {
+                    const anotadas = ev.reservas_confirmadas?.length || 0;
+                    const lugaresDisponibles = ev.cupo_maximo - anotadas;
+                    const estaLlena = lugaresDisponibles <= 0;
+                    const yaAnotada = ev.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil?.id);
+                    
+                    // LÓGICA CORREGIDA ACÁ (Revisa ambas columnas de precio)
+                    const precioReal = ev.precio || ev.precio_evento || 0;
+                    const esEventoPago = ev.es_evento && ev.costo_creditos === 0 && precioReal > 0;
+
+                    return (
+                      <div key={ev.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col hover:border-primary/50 transition-colors">
+                        <div className="h-56 relative bg-muted">
+                          {ev.imagen_url ? (
+                            <img src={ev.imagen_url} alt={ev.nivel} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                              <CalendarDays className="h-10 w-10 opacity-30" />
+                            </div>
+                          )}
+                          <div className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm text-foreground px-3 py-1.5 rounded-lg text-xs font-black uppercase shadow-sm border border-border/50 text-center">
+                            {format(parseISO(ev.fecha), 'dd/MM')} <br/>
+                            <span className="text-primary">{ev.horario.slice(0,5)}hs</span>
                           </div>
-                        )}
-                      </div>
-                      <div className="p-6 flex flex-col flex-1">
-                        <h3 className="text-xl font-black uppercase text-foreground">{ev.titulo}</h3>
-                        <p className="text-muted-foreground mt-2 mb-6 flex-1 text-sm">{ev.descripcion}</p>
-                        <div className="flex items-center justify-between pt-4 border-t border-border">
-                          <span className="text-lg font-black text-foreground">${ev.precio}</span>
-                          <Button onClick={() => window.open(`https://wa.me/5491141429761?text=Hola Flor! Quiero info/anotarme al evento: ${ev.titulo}`, '_blank')} className="font-bold">Consultar</Button>
+                        </div>
+                        <div className="p-6 flex flex-col flex-1">
+                          <h3 className="text-2xl font-black uppercase text-foreground leading-tight">{ev.nivel}</h3>
+                          <p className="text-muted-foreground mt-3 mb-6 flex-1 text-sm">{ev.descripcion_evento || "Evento especial del estudio."}</p>
+                          
+                          <div className="flex items-center justify-between pt-4 border-t border-border gap-4">
+                            <div className="text-left">
+                              <span className="text-xl font-black text-foreground">
+                                {esEventoPago ? `$${precioReal}` : `${ev.costo_creditos} Crédito(s)`}
+                              </span>
+                              <p className={`text-[10px] uppercase font-bold mt-1 ${estaLlena ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                {estaLlena ? "Agotado" : `${lugaresDisponibles} lugares libres`}
+                              </p>
+                            </div>
+                            
+                            <Button 
+                              onClick={() => esEventoPago ? handlePagarEventoMP(ev) : handleAnotarseEventoConCredito(ev)}
+                              disabled={comprando === ev.id || procesandoEvento === ev.id || estaLlena || yaAnotada}
+                              className={`font-bold w-1/2 uppercase tracking-widest text-[10px] h-12 shadow-md ${esEventoPago && !yaAnotada && !estaLlena ? 'bg-[#009EE3] hover:bg-[#008CC9] text-white' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+                            >
+                              {comprando === ev.id || procesandoEvento === ev.id ? <Loader2 className="h-5 w-5 animate-spin" /> : 
+                               yaAnotada ? "Anotada" : 
+                               estaLlena ? "Agotado" : 
+                               esEventoPago ? "Pagar ($)" : "Anotarme"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-
-                  {clasesEventos.map(clase => (
-                    <div key={clase.id} className="bg-card border border-primary/20 rounded-xl overflow-hidden shadow-sm flex flex-col p-6">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Clase Especial</span>
-                          <span className="font-bold text-muted-foreground">{clase.dia_semana} {clase.horario}</span>
-                        </div>
-                        <h3 className="text-xl font-black uppercase text-foreground mt-2">{clase.nivel || "Clase Especial de la semana"}</h3>
-                        <p className="text-muted-foreground mt-2 text-sm">Esta clase está marcada como evento en la grilla y requiere <strong className="text-foreground">{clase.costo_creditos} crédito(s)</strong> para anotarse.</p>
-                      </div>
-                      <div className="pt-6 mt-4 border-t border-border">
-                        <Button onClick={() => setSeccionActiva("clases")} variant="outline" className="w-full font-bold">Ir a la Grilla para Reservar</Button>
-                      </div>
-                    </div>
-                  ))}
-
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="bg-card border border-border rounded-xl p-12 shadow-sm text-center">

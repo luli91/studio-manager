@@ -205,7 +205,10 @@ export default function AdminClasesPage() {
             </div>
           ) : (
             <div className="divide-y divide-border max-h-[70vh] overflow-y-auto">
-              {clasesFiltradas.map((clase) => (
+              {clasesFiltradas.map((clase) => {
+                const precioReal = clase.precio_evento || clase.precio || 0;
+                
+                return (
                 <div key={clase.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-accent transition-colors">
                   
                   <div className="flex items-center gap-4">
@@ -225,7 +228,7 @@ export default function AdminClasesPage() {
                         )}
                       </h3>
                       <p className="text-sm text-muted-foreground font-medium">
-                        {formatearFecha(clase.fecha)} • {clase.costo_creditos === 0 ? `Precio: $${clase.precio}` : `Gasta ${clase.costo_creditos} clase${clase.costo_creditos !== 1 ? 's' : ''}`}
+                        {formatearFecha(clase.fecha)} • {clase.es_evento && clase.costo_creditos === 0 ? `Precio: $${precioReal}` : `Gasta ${clase.costo_creditos} clase${clase.costo_creditos !== 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>
@@ -247,7 +250,7 @@ export default function AdminClasesPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

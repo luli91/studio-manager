@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { createClient } from "@supabase/supabase-js";
 
@@ -16,37 +15,41 @@ export async function POST(request: Request) {
 
       if (payment.status === "approved") {
         const perfilId = payment.external_reference;
-        const clasesASumar = Number(payment.metadata.cantidad_clases);
         const monto = Number(payment.transaction_amount);
-        
-        // Mercado pago guarda el nombre del pack en "description"
-        const conceptoPack = payment.description || `Pack ${clasesASumar} clases`;
+        const metadata = payment.metadata;
 
+        // ACCIÓN 1: SI COMPRÓ UN PACK
+        if (metadata.tipo === "pack") {
+          const clasesASumar = Number(metadata.cantidad_clases);
+          const conceptoPack = payment.description || `Pack ${clasesASumar} clases`;
 
-        // 1. Obtener créditos actuales de la alumna
-        const { data: perfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", perfilId).single();
-
-        if (perfil) {
-          const nuevosCreditos = perfil.creditos_clases + clasesASumar;
-
-          // 2. Sumarle los créditos a la alumna (Se actualiza el panel superior)
-          await supabase.from("perfiles").update({ creditos_clases: nuevosCreditos }).eq("id", perfilId);
-          
-          // 3. Registrar el pago en el historial (Para VistaPagos y Finanzas)
-          const { error: errorPago } = await supabase.from("pagos").insert([{
-            perfil_id: perfilId,
-            monto: monto,
-            metodo_pago: "Mercado Pago",
-            concepto: conceptoPack,
-            cantidad_clases: clasesASumar,
-            fecha: new Date().toISOString() // Obligamos a guardar la fecha exacta de hoy
-          }]);
-
-          if (errorPago) {
-            console.error("❌ Error guardando el recibo en Supabase:", errorPago);
-          } else {
-            console.log("🧾 Recibo guardado exitosamente en el historial.");
+          const { data: perfil } = await supabase.from("perfiles").select("creditos_clases").eq("id", perfilId).single();
+          if (perfil) {
+            await supabase.from("perfiles").update({ creditos_clases: perfil.creditos_clases + clasesASumar }).eq("id", perfilId);
+            await supabase.from("pagos").insert([{
+              perfil_id: perfilId, monto: monto, metodo_pago: "Mercado Pago", concepto: conceptoPack, cantidad_clases: clasesASumar, fecha: new Date().toISOString()
+            }]);
           }
+        } 
+        
+        // ACCIÓN 2: SI PAGÓ UN EVENTO
+        else if (metadata.tipo === "evento") {
+          const eventoId = metadata.evento_id;
+          const fechaEvento = metadata.fecha_evento;
+          const conceptoEvento = payment.description || "Inscripción a Evento";
+
+          // Anotamos a la alumna directo en la grilla
+          await supabase.from('reservas').upsert({
+            perfil_id: perfilId,
+            clase_id: eventoId,
+            fecha_clase: fechaEvento,
+            estado: 'confirmada'
+          }, { onConflict: 'perfil_id,clase_id,fecha_clase' });
+
+          // Registramos el pago para las finanzas de Flor
+          await supabase.from("pagos").insert([{
+            perfil_id: perfilId, monto: monto, metodo_pago: "Mercado Pago", concepto: conceptoEvento, cantidad_clases: 0, fecha: new Date().toISOString()
+          }]);
         }
       }
     } catch (error) {

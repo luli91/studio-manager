@@ -5,8 +5,6 @@ import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
 import { Loader2, Clock, Users, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { format, parseISO } from "date-fns"
-import { es } from "date-fns/locale"
 
 export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: any, onReservaExitosa: () => void }) {
   const supabase = createClient()
@@ -14,18 +12,11 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
   const [cargando, setCargando] = useState(true)
   const [procesandoId, setProcesandoId] = useState<string | null>(null)
   
-  const [wppEstudio, setWppEstudio] = useState("5491112345678") // Wpp Dinámico
-
   const [mesActual, setMesActual] = useState(new Date())
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(new Date().toISOString().split('T')[0])
 
   useEffect(() => {
     const cargarDatosInit = async () => {
-      // Cargamos el Wpp
-      const { data: config } = await supabase.from("configuracion").select("valor").eq("key", "reglas").single()
-      if (config?.valor?.whatsapp_estudio) setWppEstudio(config.valor.whatsapp_estudio)
-
-      // Cargamos la grilla
       const hoy = new Date().toISOString().split('T')[0]
       const { data } = await supabase
         .from("clases")
@@ -89,6 +80,24 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
     } finally {
       setProcesandoId(null)
     }
+  }
+
+  // NUEVO: Función para pagar Evento directo desde la grilla
+  const handlePagarEventoConMP = async (clase: any) => {
+    if (!perfil) return;
+    setProcesandoId(clase.id);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Le avisamos al checkout que es un EVENTO
+        body: JSON.stringify({ tipo: "evento", evento: clase, perfilId: perfil.id }),
+      });
+      const data = await res.json();
+      if (data.init_point) window.location.href = data.init_point;
+      else toast.error("Error al conectar con Mercado Pago.");
+    } catch (error) { toast.error("Ocurrió un error de conexión."); }
+    finally { setProcesandoId(null); }
   }
 
   const cambiarMes = (offset: number) => {
@@ -182,7 +191,9 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
               const estaLlena = lugaresDisponibles <= 0
               const yaAnotada = clase.reservas_confirmadas?.some((r: any) => r.perfil_id === perfil?.id)
               
-              const esEventoPago = clase.es_evento && clase.costo_creditos === 0 && clase.precio > 0
+              // LÓGICA CORREGIDA ACÁ
+              const precioReal = clase.precio || clase.precio_evento || 0;
+              const esEventoPago = clase.es_evento && clase.costo_creditos === 0 && precioReal > 0;
 
               return (
                 <div key={clase.id} className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/50 transition-colors">
@@ -199,7 +210,7 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
                         {clase.es_evento && <Sparkles className="h-4 w-4 text-primary" />}
                       </h4>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {esEventoPago ? `Evento Pago: $${clase.precio}` : clase.es_evento ? clase.descripcion || "Evento con crédito" : "Clase regular"}
+                        {esEventoPago ? `Evento Pago: $${precioReal}` : clase.es_evento ? `Evento con ${clase.costo_creditos} crédito(s)` : "Clase regular"}
                       </p>
                     </div>
                   </div>
@@ -214,18 +225,17 @@ export default function GrillaReservas({ perfil, onReservaExitosa }: { perfil: a
 
                     {esEventoPago ? (
                       <Button 
-                        onClick={() => {
-                          const msj = `Hola Flor! Me gustaría anotarme al evento de ${clase.nivel} el día ${fechaSeleccionada.split('-').reverse().join('/')} a las ${clase.horario.slice(0,5)}hs. ¿Me pasás los datos para abonar los $${clase.precio}?`
-                          window.open(`https://wa.me/${wppEstudio}?text=${encodeURIComponent(msj)}`, '_blank')
-                        }}
-                        disabled={estaLlena || yaAnotada}
+                        onClick={() => handlePagarEventoConMP(clase)}
+                        disabled={estaLlena || yaAnotada || procesandoId === clase.id}
                         className={
                           yaAnotada ? "bg-secondary text-foreground hover:bg-secondary/80" :
                           estaLlena ? "bg-muted text-muted-foreground" : 
-                          "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-colors"
+                          "bg-[#009EE3] hover:bg-[#008CC9] text-white shadow-sm transition-colors"
                         }
                       >
-                        {yaAnotada ? "Ya estás anotada" : estaLlena ? "Agotado" : <><MessageCircle className="h-4 w-4 mr-2" /> Reservar ($)</>}
+                        {procesandoId === clase.id ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                         yaAnotada ? "Ya estás anotada" : 
+                         estaLlena ? "Agotado" : "Pagar ($)"}
                       </Button>
                     ) : (
                       <Button 
