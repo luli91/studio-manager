@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
-import { Loader2, Search, UserPlus, ChevronRight, Phone } from "lucide-react"
+import { Loader2, Search, UserPlus, ChevronRight, Phone, UserMinus, ShieldAlert, AlertTriangle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,10 @@ export default function DirectorioProfes() {
   const [alumnas, setAlumnas] = useState<any[]>([])
   const [busquedaModal, setBusquedaModal] = useState("")
   const [cargandoAlumnas, setCargandoAlumnas] = useState(false)
-  const [convirtiendo, setConvirtiendo] = useState(false)
+  
+  const [alumnaAConvertir, setAlumnaAConvertir] = useState<{id: string, nombre: string} | null>(null)
+  const [profeADegradar, setProfeADegradar] = useState<{id: string, nombre: string} | null>(null)
+  const [procesando, setProcesando] = useState(false)
 
   const cargarProfes = async () => {
     setCargando(true)
@@ -50,21 +53,40 @@ export default function DirectorioProfes() {
     setCargandoAlumnas(false)
   }
 
-  const convertirAProfe = async (alumnaId: string, nombre: string) => {
-    const confirmacion = window.confirm(`¿Estás segura que querés darle rol de Profesora a ${nombre}? \nDesde ahora tendrá acceso a ver grillas y asignar asistencias.`)
-    if (!confirmacion) return
+  // ACCIÓN FINAL: Convertir a profe
+  const ejecutarConversion = async () => {
+    if (!alumnaAConvertir) return
 
-    setConvirtiendo(true)
+    setProcesando(true)
     try {
-      const { error } = await supabase.from("perfiles").update({ rol: "profe" }).eq("id", alumnaId)
+      const { error } = await supabase.from("perfiles").update({ rol: "profe" }).eq("id", alumnaAConvertir.id)
       if (error) throw error
-      toast.success(`¡${nombre} fue agregada al Staff! 🎉`)
+      toast.success(`¡${alumnaAConvertir.nombre} fue agregada al Staff! 🎉`)
+      setAlumnaAConvertir(null)
       setModalAbierto(false)
       cargarProfes() 
     } catch (error: any) {
       toast.error("Error al cambiar rol: " + error.message)
     } finally {
-      setConvirtiendo(false)
+      setProcesando(false)
+    }
+  }
+
+  // ACCIÓN FINAL: Degradar de profe a alumna
+  const ejecutarDegradacion = async () => {
+    if (!profeADegradar) return
+
+    setProcesando(true)
+    try {
+      const { error } = await supabase.from("perfiles").update({ rol: "alumna" }).eq("id", profeADegradar.id)
+      if (error) throw error
+      toast.success(`Rol de profesora revocado a ${profeADegradar.nombre}.`)
+      setProfeADegradar(null)
+      cargarProfes() 
+    } catch (error: any) {
+      toast.error("Error al revocar rol: " + error.message)
+    } finally {
+      setProcesando(false)
     }
   }
 
@@ -120,8 +142,8 @@ export default function DirectorioProfes() {
           ) : (
             <div className="divide-y divide-border">
               {profesFiltradas.map((profe) => (
-                <Link key={profe.id} href={`/admin/profesoras/${profe.id}`}>
-                  <div className="flex items-center justify-between p-4 sm:px-6 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group">
+                <Link key={profe.id} href={`/admin/profesoras/${profe.id}`} className="block hover:bg-accent transition-colors group">
+                  <div className="flex items-center justify-between p-4 sm:px-6">
                     
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-black text-xl group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
@@ -138,7 +160,22 @@ export default function DirectorioProfes() {
                       </div>
                     </div>
                     
-                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        title="Quitar rol de profesora"
+                        onClick={(e) => {
+                          e.preventDefault(); // Evita que se abra el Link al perfil
+                          setProfeADegradar({ id: profe.id, nombre: profe.nombre_completo || "esta persona" });
+                        }}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                      
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -147,8 +184,9 @@ export default function DirectorioProfes() {
         </CardContent>
       </Card>
 
+      {/* --- MODAL PARA BUSCAR Y AGREGAR PROFE --- */}
       {modalAbierto && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-card rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden border-2 border-border">
             <div className="p-6 bg-primary text-primary-foreground flex justify-between items-center shrink-0">
               <div>
@@ -163,7 +201,7 @@ export default function DirectorioProfes() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Buscar por nombre..." 
-                  className="pl-10 bg-card h-12 rounded-xl border-border font-medium text-sm"
+                  className="pl-10 bg-card h-12 rounded-xl border-border font-medium text-sm focus-visible:ring-ring"
                   value={busquedaModal}
                   onChange={(e) => setBusquedaModal(e.target.value)}
                 />
@@ -184,8 +222,7 @@ export default function DirectorioProfes() {
                         </div>
                         <Button 
                           size="sm" 
-                          onClick={() => convertirAProfe(alumna.id, alumna.nombre_completo)}
-                          disabled={convirtiendo}
+                          onClick={() => setAlumnaAConvertir({ id: alumna.id, nombre: alumna.nombre_completo })}
                           className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-8 px-3 rounded-lg transition-colors shadow-sm"
                         >
                           Dar de Alta
@@ -195,6 +232,58 @@ export default function DirectorioProfes() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL CONFIRMACIÓN: CONVERTIR A PROFE --- */}
+      {alumnaAConvertir && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center space-y-5 border border-primary">
+            <div className="mx-auto w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-2 shadow-inner">
+              <ShieldAlert className="h-8 w-8" />
+            </div>
+            <div>
+              <h3 className="font-black text-2xl text-foreground tracking-tighter">¿Hacer Profesora?</h3>
+              <p className="text-muted-foreground text-sm mt-2 font-medium leading-relaxed">
+                Estás por darle el rol de Staff a <strong>{alumnaAConvertir.nombre}</strong>. Tendrá acceso a ver grillas, alumnas y asignar asistencias.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 pt-4">
+              <Button onClick={ejecutarConversion} disabled={procesando} className="w-full rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg h-12">
+                {procesando ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                Confirmar y dar acceso
+              </Button>
+              <Button onClick={() => setAlumnaAConvertir(null)} disabled={procesando} variant="ghost" className="w-full rounded-xl font-bold text-muted-foreground hover:bg-accent h-12">
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL CONFIRMACIÓN: DEGRADAR A ALUMNA --- */}
+      {profeADegradar && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center space-y-5 border border-destructive">
+            <div className="mx-auto w-16 h-16 bg-destructive/20 text-destructive rounded-full flex items-center justify-center mb-2 shadow-inner">
+              <AlertTriangle className="h-8 w-8" />
+            </div>
+            <div>
+              <h3 className="font-black text-2xl text-foreground tracking-tighter uppercase italic">¿Quitar Rol?</h3>
+              <p className="text-muted-foreground text-sm mt-2 font-medium leading-relaxed">
+                <strong>{profeADegradar.nombre}</strong> volverá a ser una alumna normal y ya no podrá ver el panel de administración ni el staff.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 pt-4">
+              <Button onClick={ejecutarDegradacion} disabled={procesando} variant="destructive" className="w-full rounded-xl font-bold uppercase tracking-wider h-12">
+                {procesando ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                Sí, quitar acceso
+              </Button>
+              <Button onClick={() => setProfeADegradar(null)} disabled={procesando} variant="outline" className="w-full rounded-xl font-bold border-border text-foreground hover:bg-accent h-12">
+                Cancelar
+              </Button>
             </div>
           </div>
         </div>
